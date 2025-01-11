@@ -1,6 +1,6 @@
 "use client";
 
-import {FC, useEffect, useState} from 'react';
+import {DragEvent, FC, ReactNode, useEffect, useState} from 'react';
 import * as Tone from 'tone';
 
 interface StringNotes {
@@ -9,23 +9,16 @@ interface StringNotes {
 
 const Container: FC<{
     isLoaded: boolean;
-    loadError: string | null;
-    children: React.ReactNode;
-}> = ({isLoaded, loadError, children}) => {
+    children: ReactNode;
+}> = ({isLoaded, children}) => {
     return (
-        <div className="w-full p-6 bg-white rounded-lg shadow-lg">
+        <div className="w-full max-w-7xl">
             <div className="mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Acoustic Guitar Tab Editor</h2>
                 {!isLoaded && (
                     <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
                         <h3 className="text-sm font-medium text-blue-800">Loading</h3>
                         <p className="text-sm text-blue-700">Loading guitar samples...</p>
-                    </div>
-                )}
-                {loadError && (
-                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-                        <h3 className="text-sm font-medium text-yellow-800">Sound System</h3>
-                        <p className="text-sm text-yellow-700">{loadError}</p>
                     </div>
                 )}
             </div>
@@ -55,107 +48,107 @@ const CapoControl: FC<{
 
 const TabDisplaySection: FC<{
     tab: string[][];
-    stringNotes: StringNotes;
     playNote: (string: number, fret: string) => void;
-    handleDragOver: (e: React.DragEvent) => void;
-    handleDrop: (e: React.DragEvent, stringIndex: number, position: number) => void;
+    handleDragOver: (e: DragEvent) => void;
+    handleDrop: (e: DragEvent, stringIndex: number, position: number) => void;
     currentlyPlayingNotes?: { stringIndex: number; position: number }[];
     updateNote: (stringIndex: number, position: number, value: string) => void;
 }> = ({
           tab,
-          stringNotes,
           playNote,
           handleDragOver,
           handleDrop,
           currentlyPlayingNotes = [],
           updateNote,
       }) => {
-    const [editingPosition, setEditingPosition] = useState<{stringIndex: number, position: number} | null>(null);
+    const [editingPosition, setEditingPosition] = useState<{ stringIndex: number, position: number } | null>(null);
 
     return (
-        <div className="space-y-4 bg-amber-50 p-4 rounded-lg mb-6">
-            {tab.map((stringNotes, stringIndex) => (
-                <div
-                    key={stringIndex}
-                    className="flex items-center space-x-2 min-h-12 relative"
-                    onDragOver={handleDragOver}
-                >
-                    <span className="w-16 font-mono text-gray-700">
-                        {stringNotes[5 - stringIndex]}
-                    </span>
-                    <div className="flex-1 flex items-center h-12 bg-white border border-gray-200 rounded-lg relative">
-                        {[...Array(16)].map((_, position) => (
-                            <div
-                                key={position}
-                                className="w-12 h-full border-r border-dashed border-amber-200 relative cursor-pointer hover:bg-amber-50"
-                                onDrop={(e) => handleDrop(e, stringIndex, position)}
-                                onDragOver={handleDragOver}
-                                onClick={() => {
-                                    if (!stringNotes[position]) {
-                                        setEditingPosition({ stringIndex, position });
-                                    }
-                                }}
-                            >
-                                {stringNotes[position] !== undefined && stringNotes[position] !== 'space' ? (
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <input
-                                            type="text"
-                                            value={stringNotes[position]}
-                                            onChange={(e) => {
-                                                const value = e.target.value;
-                                                if (/^(?:[0-9]|1[0-9]|2[0-4])$/.test(value) || value === '') {
-                                                    updateNote(stringIndex, position, value);
-                                                }
-                                            }}
-                                            className={`w-8 h-8 rounded-full text-center text-white cursor-text transition-colors outline-none ${
-                                                currentlyPlayingNotes?.some(
-                                                    note => note.stringIndex === stringIndex &&
-                                                        note.position === position
-                                                )
-                                                    ? 'bg-green-600 animate-pulse'
-                                                    : 'bg-amber-700 hover:bg-amber-600'
-                                            }`}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                playNote(stringIndex, stringNotes[position]);
-                                            }}
-                                        />
-                                    </div>
-                                ) : editingPosition?.stringIndex === stringIndex &&
-                                editingPosition?.position === position ? (
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <input
-                                            type="text"
-                                            value=""
-                                            autoFocus
-                                            onChange={(e) => {
-                                                const value = e.target.value;
-                                                if (/^(?:[0-9]|1[0-9]|2[0-4])$/.test(value) || value === '') {
-                                                    updateNote(stringIndex, position, value);
-                                                    setEditingPosition(null);
-                                                }
-                                            }}
-                                            onBlur={() => setEditingPosition(null)}
-                                            className="w-8 h-8 rounded-full text-center text-white cursor-text transition-colors outline-none bg-amber-700 hover:bg-amber-600"
-                                            onClick={(e) => e.stopPropagation()}
-                                        />
-                                    </div>
-                                ) : stringNotes[position] === 'space' ? (
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                                    </div>
-                                ) : null}
-                            </div>
-                        ))}
+        <div className="w-full bg-amber-50 p-6 rounded-lg mb-6">
+            <div className="grid grid-rows-6 gap-4">
+                {tab.map((stringNotes, stringIndex) => (
+                    <div
+                        key={stringIndex}
+                        className="flex items-center space-x-4"
+                        onDragOver={handleDragOver}
+                    >
+                        <span className="w-20 font-mono text-gray-700 text-center">
+                            {`${6 - stringIndex}`}
+                        </span>
+                        <div className="flex-1 h-16 bg-white border border-gray-200 rounded-lg flex">
+                            {[...Array(16)].map((_, position) => (
+                                <div
+                                    key={position}
+                                    className="flex-1 h-full border-r border-dashed border-amber-200 relative cursor-pointer hover:bg-amber-50 transition-colors"
+                                    onDrop={(e) => handleDrop(e, stringIndex, position)}
+                                    onDragOver={handleDragOver}
+                                    onClick={() => {
+                                        if (!stringNotes[position]) {
+                                            setEditingPosition({stringIndex, position});
+                                        }
+                                    }}
+                                >
+                                    {stringNotes[position] !== undefined && stringNotes[position] !== 'space' ? (
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <input
+                                                type="text"
+                                                value={stringNotes[position]}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    if (/^(?:[0-9]|1[0-9]|2[0-4])$/.test(value) || value === '') {
+                                                        updateNote(stringIndex, position, value);
+                                                    }
+                                                }}
+                                                className={`w-10 h-10 rounded-full text-center text-white cursor-text transition-colors outline-none ${
+                                                    currentlyPlayingNotes?.some(
+                                                        note => note.stringIndex === stringIndex &&
+                                                            note.position === position
+                                                    )
+                                                        ? 'bg-green-600 animate-pulse'
+                                                        : 'bg-amber-700 hover:bg-amber-600'
+                                                }`}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    playNote(stringIndex, stringNotes[position]);
+                                                }}
+                                            />
+                                        </div>
+                                    ) : editingPosition?.stringIndex === stringIndex &&
+                                    editingPosition?.position === position ? (
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <input
+                                                type="text"
+                                                value=""
+                                                autoFocus
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    if (/^(?:[0-9]|1[0-9]|2[0-4])$/.test(value) || value === '') {
+                                                        updateNote(stringIndex, position, value);
+                                                        setEditingPosition(null);
+                                                    }
+                                                }}
+                                                onBlur={() => setEditingPosition(null)}
+                                                className="w-10 h-10 rounded-full text-center text-white cursor-text transition-colors outline-none bg-amber-700 hover:bg-amber-600"
+                                                onClick={(e) => e.stopPropagation()}
+                                            />
+                                        </div>
+                                    ) : stringNotes[position] === 'space' ? (
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                </div>
-            ))}
+                ))}
+            </div>
         </div>
     );
 };
 
 const FretSelector: FC<{
-    handleDragStart: (e: React.DragEvent, fret: number) => void;
+    handleDragStart: (e: DragEvent, fret: number) => void;
 }> = ({handleDragStart}) => {
     return (
         <div className="p-4 bg-amber-100 rounded-lg">
@@ -181,7 +174,7 @@ const FretSelector: FC<{
 const TempoControl: FC<{
     tempo: number;
     setTempo: (tempo: number) => void;
-}> = ({ tempo, setTempo }) => {
+}> = ({tempo, setTempo}) => {
     return (
         <div className="flex items-center space-x-4 mb-6">
             <label className="text-gray-700">Tempo (BPM):</label>
@@ -213,9 +206,9 @@ const GuitarTabEditor = () => {
     const [draggedNote, setDraggedNote] = useState<string | null>(null);
     const [sampler, setSampler] = useState<any>(null);
     const [isLoaded, setIsLoaded] = useState(false);
-    const [loadError, setLoadError] = useState<string | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [noteSequence, setNoteSequence] = useState<Note[]>([]);
+
     const [tab, setTab] = useState<string[][]>([
         [], // String 6 (Low E)
         [], // String 5 (A)
@@ -381,7 +374,7 @@ const GuitarTabEditor = () => {
 
         // Fill timeline with empty arrays for each position
         for (let i = 0; i <= maxPosition; i++) {
-            timeline[i] = { position: i, notes: [] };
+            timeline[i] = {position: i, notes: []};
         }
 
         // Fill in the notes at their correct positions
@@ -441,25 +434,21 @@ const GuitarTabEditor = () => {
     };
 
     const updateNote = (stringIndex: number, position: number, value: string) => {
-        const newTab = [...tab];
-
-        // Ensure array has enough space
-        while (newTab[stringIndex].length <= position) {
-            newTab[stringIndex].push(undefined);
-        }
+        const newTab = tab.map(stringNotes => [...stringNotes]); // Create deep copy
 
         if (value === '') {
             // Remove the note
-            newTab[stringIndex][position] = undefined;
-            // Remove from note sequence
-            setNoteSequence(prev => prev.filter(note =>
-                note.stringIndex !== stringIndex || note.position !== position
-            ));
+            if (newTab[stringIndex][position]) {
+                newTab[stringIndex][position] = undefined;
+                setNoteSequence(prev => prev.filter(note =>
+                    note.stringIndex !== stringIndex || note.position !== position
+                ));
+            }
         } else {
-            // Update the note at exact position
+            // Update single position only
             newTab[stringIndex][position] = value;
 
-            // Play the note when added/updated
+            // Play the note
             playNote(stringIndex, value);
 
             // Update note sequence
@@ -484,6 +473,7 @@ const GuitarTabEditor = () => {
                 }
             });
         }
+
         setTab(newTab);
     };
 
@@ -554,7 +544,7 @@ const GuitarTabEditor = () => {
         };
     }, []);
 
-    const handleDrop = (e: React.DragEvent, stringIndex: number, position: number) => {
+    const handleDrop = (e: DragEvent, stringIndex: number, position: number) => {
         e.preventDefault();
         setIsDragging(false);
 
@@ -598,7 +588,7 @@ const GuitarTabEditor = () => {
 
     return (
         <>
-            <Container isLoaded={isLoaded} loadError={loadError}>
+            <Container isLoaded={isLoaded}>
                 <CapoControl capo={capo} setCapo={setCapo}/>
                 <TempoControl tempo={tempo} setTempo={setTempo}/>
                 <TabDisplaySection
@@ -642,8 +632,9 @@ const GuitarTabEditor = () => {
                 {noteSequence.length > 0 && !isPlaying && (
                     <button
                         onClick={() => {
-                            setTab(Array(6).fill([]));
-                            setNoteSequence([]);
+                            setTab([[], [], [], [], [], []]); // Reset to 6 empty arrays
+                            setNoteSequence([]); // Clear the sequence
+                            setCurrentlyPlayingNotes([]); // Reset any playing notes
                         }}
                         className="px-4 py-2 rounded-md text-white bg-gray-600 hover:bg-gray-700 transition-colors"
                     >
