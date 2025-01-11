@@ -230,29 +230,30 @@ const GuitarTabEditor = () => {
 
     useEffect(() => {
         // Using the provided acoustic guitar samples
+        const prefix = process.env.NEXT_PUBLIC_BASE_PATH || '';
         const newSampler = new Tone.Sampler({
             urls: {
-                'A2': '/notes/A2.mp3',
-                'A3': '/notes/A3.mp3',
-                'A4': '/notes/A4.mp3',
-                'B2': '/notes/B2.mp3',
-                'B3': '/notes/B3.mp3',
-                'B4': '/notes/B4.mp3',
-                'C3': '/notes/C3.mp3',
-                'C4': '/notes/C4.mp3',
-                'C5': '/notes/C5.mp3',
-                'D2': '/notes/D2.mp3',
-                'D3': '/notes/D3.mp3',
-                'D4': '/notes/D4.mp3',
-                'E2': '/notes/E2.mp3',
-                'E3': '/notes/E3.mp3',
-                'E4': '/notes/E4.mp3',
-                'F2': '/notes/F2.mp3',
-                'F3': '/notes/F3.mp3',
-                'F4': '/notes/F4.mp3',
-                'G2': '/notes/G2.mp3',
-                'G3': '/notes/G3.mp3',
-                'G4': '/notes/G4.mp3'
+                'A2': `${prefix}/notes/A2.mp3`,
+                'A3': `${prefix}/notes/A3.mp3`,
+                'A4': `${prefix}/notes/A4.mp3`,
+                'B2': `${prefix}/notes/B2.mp3`,
+                'B3': `${prefix}/notes/B3.mp3`,
+                'B4': `${prefix}/notes/B4.mp3`,
+                'C3': `${prefix}/notes/C3.mp3`,
+                'C4': `${prefix}/notes/C4.mp3`,
+                'C5': `${prefix}/notes/C5.mp3`,
+                'D2': `${prefix}/notes/D2.mp3`,
+                'D3': `${prefix}/notes/D3.mp3`,
+                'D4': `${prefix}/notes/D4.mp3`,
+                'E2': `${prefix}/notes/E2.mp3`,
+                'E3': `${prefix}/notes/E3.mp3`,
+                'E4': `${prefix}/notes/E4.mp3`,
+                'F2': `${prefix}/notes/F2.mp3`,
+                'F3': `${prefix}/notes/F3.mp3`,
+                'F4': `${prefix}/notes/F4.mp3`,
+                'G2': `${prefix}/notes/G2.mp3`,
+                'G3': `${prefix}/notes/G3.mp3`,
+                'G4': `${prefix}/notes/G4.mp3`
             },
             onload: () => {
                 setIsLoaded(true);
