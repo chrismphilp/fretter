@@ -1,6 +1,6 @@
 "use client";
 
-import {DragEvent, useEffect, useState} from 'react';
+import {DragEvent, useEffect, useRef, useState} from 'react';
 import {Chorus, Compressor, Filter, now, PolySynth, Reverb, Sampler, start, Synth} from "tone";
 import GuitarTabContainer from "./GuitarTabContainer";
 import CapoControl from "./CapoControl";
@@ -13,10 +13,11 @@ interface StringNotes {
     [key: number]: string;
 }
 
-interface Note {
+export interface Note {
     stringIndex: number;
     fret: string;
     position: number;
+    type?: 'h' | 'p';
 }
 
 const GuitarTabEditor = () => {
@@ -24,12 +25,12 @@ const GuitarTabEditor = () => {
     const [currentlyPlayingNotes, setCurrentlyPlayingNotes] = useState<Note[]>([]);
     const [tempo, setTempo] = useState<number>(120); // BPM (beats per minute)
     const [capo, setCapo] = useState<number>(0);
-    const [isDragging, setIsDragging] = useState(false);
     const [draggedNote, setDraggedNote] = useState<string | null>(null);
     const [sampler, setSampler] = useState<any>(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const [noteSequence, setNoteSequence] = useState<Note[]>([]);
+    const playbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const [tab, setTab] = useState<string[][]>([
         [], // String 6 (Low E)
@@ -154,6 +155,10 @@ const GuitarTabEditor = () => {
         setSampler(newSampler);
 
         return () => {
+            if (playbackTimeoutRef.current) {
+                clearTimeout(playbackTimeoutRef.current);
+            }
+            sampler?.releaseAll();
             newSampler.dispose();
             reverb.dispose();
             compressor.dispose();
@@ -175,13 +180,24 @@ const GuitarTabEditor = () => {
         return `${notes[newNoteIndex]}${openNoteOctave + octaveChange}`;
     };
 
-    const playNote = (string: number, fret: string) => {
+    const playNote = (string: number, fret: string, type?: 'h' | 'p') => {
         if (sampler && isLoaded) {
             const note = getNoteFromFret(string, fret);
-            // Lower velocity for single notes
-            const velocity = 0.2 + Math.random() * 0.1;
+            let velocity = 0.2;
+            let duration = "4n";
+
+            // Adjust velocity and duration based on type
+            if (type === 'h') {
+                velocity = 0.4; // Harder attack for hammer-on
+                duration = "8n"; // Shorter duration
+            } else if (type === 'p') {
+                velocity = 0.15; // Softer attack for pull-off
+                duration = "8n";
+            }
+
+            velocity += Math.random() * 0.1; // Add slight variation
             const timing = now();
-            sampler.triggerAttackRelease(note, "4n", timing, velocity);
+            sampler.triggerAttackRelease(note, duration, timing, velocity);
         }
     };
 
@@ -211,7 +227,18 @@ const GuitarTabEditor = () => {
 
             sortedNotes.forEach((note, index) => {
                 const actualNote = getNoteFromFret(note.stringIndex, note.fret);
-                const baseVelocity = 0.2;
+                let baseVelocity = 0.2;
+                let duration = "4n";
+
+                // Adjust velocity and duration based on type
+                if (note.type === 'h') {
+                    baseVelocity = 0.4;
+                    duration = "8n";
+                } else if (note.type === 'p') {
+                    baseVelocity = 0.15;
+                    duration = "8n";
+                }
+
                 const velocityVariation = 0.1;
                 const velocity = baseVelocity + Math.random() * velocityVariation;
                 const strumDelay = index * 15;
@@ -219,7 +246,7 @@ const GuitarTabEditor = () => {
 
                 sampler.triggerAttackRelease(
                     actualNote,
-                    "4n",
+                    duration,
                     timing,
                     velocity
                 );
@@ -228,8 +255,7 @@ const GuitarTabEditor = () => {
 
         const playNextPosition = (index: number) => {
             if (index >= timeline.length) {
-                setIsPlaying(false);
-                setCurrentlyPlayingNotes([]);
+                stopPlayback();
                 return;
             }
 
@@ -241,7 +267,8 @@ const GuitarTabEditor = () => {
                     currentPosition.notes.map(note => ({
                         stringIndex: note.stringIndex,
                         fret: note.fret,
-                        position: note.position
+                        position: note.position,
+                        type: note.type
                     }))
                 );
                 playChord(currentPosition.notes);
@@ -251,29 +278,45 @@ const GuitarTabEditor = () => {
             }
 
             const delayMs = (60 / tempo) * 1000;
-            setTimeout(() => playNextPosition(index + 1), delayMs);
+            playbackTimeoutRef.current = setTimeout(() => playNextPosition(index + 1), delayMs);
         };
 
         playNextPosition(0);
     };
 
-    const updateNote = (stringIndex: number, position: number, value: string) => {
-        const newTab = tab.map(stringNotes => [...stringNotes]); // Create deep copy
+    const updateNote = (stringIndex: number, position: number, value: string, type?: 'h' | 'p') => {
+        const newTab = [...tab];
+        newTab[stringIndex] = [...tab[stringIndex]];
+
 
         if (value === '') {
-            // Remove the note
-            if (newTab[stringIndex][position]) {
-                newTab[stringIndex][position] = undefined;
-                setNoteSequence(prev => prev.filter(note =>
-                    note.stringIndex !== stringIndex || note.position !== position
-                ));
+            // Clear the current position
+            newTab[stringIndex][position] = undefined;
+
+            // Cleanup the row - remove trailing spaces and undefined values
+            while (
+                newTab[stringIndex].length > 0 &&
+                (newTab[stringIndex][newTab[stringIndex].length - 1] === 'space' ||
+                    newTab[stringIndex][newTab[stringIndex].length - 1] === undefined)
+                ) {
+                newTab[stringIndex].pop();
             }
+
+            // Update note sequence
+            setNoteSequence(prev => prev.filter(note =>
+                note.stringIndex !== stringIndex || note.position !== position
+            ));
         } else {
-            // Update single position only
+            // Adding or updating a note
+            // Fill any gaps with spaces up to the position
+            while (newTab[stringIndex].length < position) {
+                newTab[stringIndex].push('space');
+            }
+
             newTab[stringIndex][position] = value;
 
             // Play the note
-            playNote(stringIndex, value);
+            playNote(stringIndex, value, type);
 
             // Update note sequence
             setNoteSequence(prev => {
@@ -285,14 +328,16 @@ const GuitarTabEditor = () => {
                     newSequence[existingNoteIndex] = {
                         stringIndex,
                         position,
-                        fret: value
+                        fret: value,
+                        type
                     };
                     return newSequence;
                 } else {
                     return [...prev, {
                         stringIndex,
                         position,
-                        fret: value
+                        fret: value,
+                        type
                     }];
                 }
             });
@@ -301,14 +346,98 @@ const GuitarTabEditor = () => {
         setTab(newTab);
     };
 
+    const exportTab = () => {
+        let tabText = "Guitar Tab\n\n";
+
+        // Add capo information if set
+        if (capo > 0) {
+            tabText += `Capo: ${capo}\n\n`;
+        }
+
+        const stringLabels = ['e|', 'B|', 'G|', 'D|', 'A|', 'E|'];
+        const stringLines = Array(6).fill('').map((_, i) => stringLabels[i]);
+
+        // Find the maximum position used in the tab
+        const maxPosition = Math.max(...tab.map(string => string.length));
+
+        // Fill in the tab content
+        for (let position = 0; position < maxPosition; position++) {
+            for (let stringIndex = 0; stringIndex < 6; stringIndex++) {
+                // Find if there's a note in the sequence at this position
+                const noteInSequence = noteSequence.find(note =>
+                    note.stringIndex === (5 - stringIndex) &&
+                    note.position === position
+                );
+
+                const note = tab[5 - stringIndex][position];
+
+                if (note === undefined || note === '') {
+                    stringLines[stringIndex] += '-';
+                } else if (note === 'space') {
+                    stringLines[stringIndex] += ' ';
+                } else {
+                    // Format based on technique
+                    if (noteInSequence?.type === 'h') {
+                        // Hammer-on: 5h7
+                        const nextNote = noteSequence.find(n =>
+                            n.stringIndex === (5 - stringIndex) &&
+                            n.position === position + 1
+                        );
+                        if (nextNote) {
+                            stringLines[stringIndex] += `${note}h${nextNote.fret}`;
+                            position++; // Skip the next position as we've included it
+                        } else {
+                            stringLines[stringIndex] += note;
+                        }
+                    } else if (noteInSequence?.type === 'p') {
+                        // Pull-off: [7]
+                        stringLines[stringIndex] += `[${note}]`;
+                    } else {
+                        // Regular note
+                        stringLines[stringIndex] += note;
+                    }
+                }
+
+                // Add spacing between notes
+                stringLines[stringIndex] += '-';
+            }
+        }
+
+        // Combine all strings
+        tabText += stringLines.join('\n') + '\n';
+
+        // Add legend
+        if (noteSequence.some(note => note.type === 'h' || note.type === 'p')) {
+            tabText += '\nLegend:\n';
+            tabText += '5h7 - hammer-on from 5 to 7\n';
+            tabText += '[5] - pull-off\n';
+        }
+
+        // Create and download the file
+        const blob = new Blob([tabText], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'guitar-tab.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    };
+
     const stopPlayback = () => {
         setIsPlaying(false);
         setCurrentlyPlayingNotes([]);
         sampler?.releaseAll();
+
+        // Clear any pending timeouts
+        if (playbackTimeoutRef.current) {
+            clearTimeout(playbackTimeoutRef.current);
+            playbackTimeoutRef.current = null;
+        }
     };
 
     const handleDragStart = (e, fret) => {
-        setIsDragging(true);
         setDraggedNote(fret);
         e.dataTransfer.setData('text/plain', fret);
         const dragImage = document.createElement('div');
@@ -370,7 +499,6 @@ const GuitarTabEditor = () => {
 
     const handleDrop = (e: DragEvent, stringIndex: number, position: number) => {
         e.preventDefault();
-        setIsDragging(false);
 
         // Check if there's already a note at this position
         if (tab[stringIndex][position] !== undefined && tab[stringIndex][position] !== 'space') {
@@ -431,6 +559,7 @@ const GuitarTabEditor = () => {
                               setTab={setTab}
                               setNoteSequence={setNoteSequence}
                               setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}
+                              exportTab={exportTab}
             />
         </GuitarTabContainer>
     );
