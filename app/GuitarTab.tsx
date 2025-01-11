@@ -1,195 +1,17 @@
 "use client";
 
-import {DragEvent, FC, ReactNode, useEffect, useState} from 'react';
-import * as Tone from 'tone';
+import {DragEvent, useEffect, useState} from 'react';
+import {Chorus, Compressor, Filter, now, PolySynth, Reverb, Sampler, start, Synth} from "tone";
+import GuitarTabContainer from "./GuitarTabContainer";
+import CapoControl from "./CapoControl";
+import TabDisplaySection from "./TabDisplaySection";
+import TempoControl from "./TempoControl";
+import FretSelector from "./FretSelector";
+import PlaybackControls from "./PlaybackControls";
 
 interface StringNotes {
     [key: number]: string;
 }
-
-const Container: FC<{
-    isLoaded: boolean;
-    children: ReactNode;
-}> = ({isLoaded, children}) => {
-    return (
-        <div className="w-full max-w-7xl">
-            <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Acoustic Guitar Tab Editor</h2>
-                {!isLoaded && (
-                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                        <h3 className="text-sm font-medium text-blue-800">Loading</h3>
-                        <p className="text-sm text-blue-700">Loading guitar samples...</p>
-                    </div>
-                )}
-            </div>
-            {children}
-        </div>
-    );
-};
-
-const CapoControl: FC<{
-    capo: number;
-    setCapo: (capo: number) => void;
-}> = ({capo, setCapo}) => {
-    return (
-        <div className="flex items-center space-x-4 mb-6">
-            <label className="w-20 text-gray-700">Capo:</label>
-            <input
-                type="number"
-                min="0"
-                max="12"
-                value={capo}
-                onChange={(e) => setCapo(parseInt(e.target.value) || 0)}
-                className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-            />
-        </div>
-    );
-};
-
-const TabDisplaySection: FC<{
-    tab: string[][];
-    playNote: (string: number, fret: string) => void;
-    handleDragOver: (e: DragEvent) => void;
-    handleDrop: (e: DragEvent, stringIndex: number, position: number) => void;
-    currentlyPlayingNotes?: { stringIndex: number; position: number }[];
-    updateNote: (stringIndex: number, position: number, value: string) => void;
-}> = ({
-          tab,
-          playNote,
-          handleDragOver,
-          handleDrop,
-          currentlyPlayingNotes = [],
-          updateNote,
-      }) => {
-    const [editingPosition, setEditingPosition] = useState<{ stringIndex: number, position: number } | null>(null);
-
-    return (
-        <div className="w-full bg-amber-50 p-6 rounded-lg mb-6">
-            <div className="grid grid-rows-6 gap-4">
-                {tab.map((stringNotes, stringIndex) => (
-                    <div
-                        key={stringIndex}
-                        className="flex items-center space-x-4"
-                        onDragOver={handleDragOver}
-                    >
-                        <span className="w-20 font-mono text-gray-700 text-center">
-                            {`${6 - stringIndex}`}
-                        </span>
-                        <div className="flex-1 h-16 bg-white border border-gray-200 rounded-lg flex">
-                            {[...Array(16)].map((_, position) => (
-                                <div
-                                    key={position}
-                                    className="flex-1 h-full border-r border-dashed border-amber-200 relative cursor-pointer hover:bg-amber-50 transition-colors"
-                                    onDrop={(e) => handleDrop(e, stringIndex, position)}
-                                    onDragOver={handleDragOver}
-                                    onClick={() => {
-                                        if (!stringNotes[position]) {
-                                            setEditingPosition({stringIndex, position});
-                                        }
-                                    }}
-                                >
-                                    {stringNotes[position] !== undefined && stringNotes[position] !== 'space' ? (
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <input
-                                                type="text"
-                                                value={stringNotes[position]}
-                                                onChange={(e) => {
-                                                    const value = e.target.value;
-                                                    if (/^(?:[0-9]|1[0-9]|2[0-4])$/.test(value) || value === '') {
-                                                        updateNote(stringIndex, position, value);
-                                                    }
-                                                }}
-                                                className={`w-10 h-10 rounded-full text-center text-white cursor-text transition-colors outline-none ${
-                                                    currentlyPlayingNotes?.some(
-                                                        note => note.stringIndex === stringIndex &&
-                                                            note.position === position
-                                                    )
-                                                        ? 'bg-green-600 animate-pulse'
-                                                        : 'bg-amber-700 hover:bg-amber-600'
-                                                }`}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    playNote(stringIndex, stringNotes[position]);
-                                                }}
-                                            />
-                                        </div>
-                                    ) : editingPosition?.stringIndex === stringIndex &&
-                                    editingPosition?.position === position ? (
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <input
-                                                type="text"
-                                                value=""
-                                                autoFocus
-                                                onChange={(e) => {
-                                                    const value = e.target.value;
-                                                    if (/^(?:[0-9]|1[0-9]|2[0-4])$/.test(value) || value === '') {
-                                                        updateNote(stringIndex, position, value);
-                                                        setEditingPosition(null);
-                                                    }
-                                                }}
-                                                onBlur={() => setEditingPosition(null)}
-                                                className="w-10 h-10 rounded-full text-center text-white cursor-text transition-colors outline-none bg-amber-700 hover:bg-amber-600"
-                                                onClick={(e) => e.stopPropagation()}
-                                            />
-                                        </div>
-                                    ) : stringNotes[position] === 'space' ? (
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                                        </div>
-                                    ) : null}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-const FretSelector: FC<{
-    handleDragStart: (e: DragEvent, fret: number) => void;
-}> = ({handleDragStart}) => {
-    return (
-        <div className="p-4 bg-amber-100 rounded-lg">
-            <h3 className="text-sm font-semibold mb-2 text-gray-800">
-                Drag fret positions to the tab:
-            </h3>
-            <div className="flex flex-wrap gap-2">
-                {[...Array(13)].map((_, i) => (
-                    <div
-                        key={i}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, i)}
-                        className="w-8 h-8 bg-amber-700 rounded-full flex items-center justify-center text-white cursor-move hover:bg-amber-600 transition-colors"
-                    >
-                        {i}
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-const TempoControl: FC<{
-    tempo: number;
-    setTempo: (tempo: number) => void;
-}> = ({tempo, setTempo}) => {
-    return (
-        <div className="flex items-center space-x-4 mb-6">
-            <label className="text-gray-700">Tempo (BPM):</label>
-            <input
-                type="range"
-                min="40"
-                max="240"
-                value={tempo}
-                onChange={(e) => setTempo(parseInt(e.target.value))}
-                className="w-48"
-            />
-            <span className="w-16 text-gray-700">{tempo} BPM</span>
-        </div>
-    );
-};
 
 interface Note {
     stringIndex: number;
@@ -199,7 +21,7 @@ interface Note {
 
 const GuitarTabEditor = () => {
     const [isSpaceMode, setIsSpaceMode] = useState(false);
-    const [currentlyPlayingNotes, setCurrentlyPlayingNotes] = useState<{ stringIndex: number; position: number }[]>([]);
+    const [currentlyPlayingNotes, setCurrentlyPlayingNotes] = useState<Note[]>([]);
     const [tempo, setTempo] = useState<number>(120); // BPM (beats per minute)
     const [capo, setCapo] = useState<number>(0);
     const [isDragging, setIsDragging] = useState(false);
@@ -231,7 +53,7 @@ const GuitarTabEditor = () => {
     useEffect(() => {
         // Using the provided acoustic guitar samples
         const prefix = process.env.NEXT_PUBLIC_BASE_PATH || '';
-        const newSampler = new Tone.Sampler({
+        const newSampler = new Sampler({
             urls: {
                 'A2': `${prefix}/notes/A2.mp3`,
                 'A3': `${prefix}/notes/A3.mp3`,
@@ -263,7 +85,7 @@ const GuitarTabEditor = () => {
 
                 // Create better fallback synth with these new settings
                 // In your useEffect where the fallback synth is created
-                const fallbackSynth = new Tone.PolySynth(Tone.Synth, {
+                const fallbackSynth = new PolySynth(Synth, {
                     oscillator: {
                         type: "sine", // Use sine wave for cleaner sound
                         partialCount: 2
@@ -278,25 +100,25 @@ const GuitarTabEditor = () => {
                 }).toDestination();
 
                 // Create and connect effects chain
-                const filter = new Tone.Filter({
+                const filter = new Filter({
                     frequency: 2000,
                     type: "lowpass",
                     rolloff: -24
                 }).toDestination();
 
-                const reverb = new Tone.Reverb({
+                const reverb = new Reverb({
                     decay: 2.5,
                     wet: 0.2
                 }).toDestination();
 
-                const compressor = new Tone.Compressor({
+                const compressor = new Compressor({
                     threshold: -20,
                     ratio: 4,
                     attack: 0.005,
                     release: 0.1
                 }).toDestination();
 
-                const chorus = new Tone.Chorus({
+                const chorus = new Chorus({
                     frequency: 1.5,
                     delayTime: 3.5,
                     depth: 0.7,
@@ -315,12 +137,12 @@ const GuitarTabEditor = () => {
         }).toDestination();
 
         // Create effects for the sampler (if real samples load)
-        const reverb = new Tone.Reverb({
+        const reverb = new Reverb({
             decay: 1.5,
             wet: 0.15
         }).toDestination();
 
-        const compressor = new Tone.Compressor({
+        const compressor = new Compressor({
             threshold: -24,
             ratio: 12,
             attack: 0.003,
@@ -358,7 +180,7 @@ const GuitarTabEditor = () => {
             const note = getNoteFromFret(string, fret);
             // Lower velocity for single notes
             const velocity = 0.2 + Math.random() * 0.1;
-            const timing = Tone.now();
+            const timing = now();
             sampler.triggerAttackRelease(note, "4n", timing, velocity);
         }
     };
@@ -366,7 +188,7 @@ const GuitarTabEditor = () => {
     const playAllNotes = async () => {
         if (!sampler || !isLoaded || isPlaying) return;
 
-        await Tone.start();
+        await start();
         setIsPlaying(true);
 
         // First, let's create a timeline of all positions, including spaces
@@ -393,7 +215,7 @@ const GuitarTabEditor = () => {
                 const velocityVariation = 0.1;
                 const velocity = baseVelocity + Math.random() * velocityVariation;
                 const strumDelay = index * 15;
-                const timing = Tone.now() + (strumDelay / 1000);
+                const timing = now() + (strumDelay / 1000);
 
                 sampler.triggerAttackRelease(
                     actualNote,
@@ -418,6 +240,7 @@ const GuitarTabEditor = () => {
                 setCurrentlyPlayingNotes(
                     currentPosition.notes.map(note => ({
                         stringIndex: note.stringIndex,
+                        fret: note.fret,
                         position: note.position
                     }))
                 );
@@ -489,7 +312,7 @@ const GuitarTabEditor = () => {
         setDraggedNote(fret);
         e.dataTransfer.setData('text/plain', fret);
         const dragImage = document.createElement('div');
-        dragImage.className = 'w-8 h-8 bg-amber-700 rounded-full flex items-center justify-center text-white';
+        dragImage.className = 'w-8 h-8 bg-blue-700 rounded-full flex items-center justify-center text-white';
         dragImage.textContent = fret;
         document.body.appendChild(dragImage);
         e.dataTransfer.setDragImage(dragImage, 20, 20);
@@ -588,68 +411,28 @@ const GuitarTabEditor = () => {
     };
 
     return (
-        <>
-            <Container isLoaded={isLoaded}>
-                <CapoControl capo={capo} setCapo={setCapo}/>
-                <TempoControl tempo={tempo} setTempo={setTempo}/>
-                <TabDisplaySection
-                    tab={tab}
-                    playNote={playNote}
-                    handleDragOver={handleDragOver}
-                    handleDrop={handleDrop}
-                    currentlyPlayingNotes={currentlyPlayingNotes}
-                    updateNote={updateNote}
-                />
-                <FretSelector handleDragStart={handleDragStart}/>
-            </Container>
-
-            {/* Playback Controls */}
-            <div className="mt-6 flex space-x-4">
-                <button
-                    onClick={async () => {
-                        // Initialize Tone.js on user interaction
-                        await Tone.start();
-                        playAllNotes();
-                    }}
-                    disabled={isPlaying || noteSequence.length === 0}
-                    className={`px-4 py-2 rounded-md text-white transition-colors ${
-                        isPlaying || noteSequence.length === 0
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-green-600 hover:bg-green-700'
-                    }`}
-                >
-                    {isPlaying ? 'Playing...' : 'Play All Notes'}
-                </button>
-
-                {isPlaying && (
-                    <button
-                        onClick={stopPlayback}
-                        className="px-4 py-2 rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors"
-                    >
-                        Stop
-                    </button>
-                )}
-
-                {noteSequence.length > 0 && !isPlaying && (
-                    <button
-                        onClick={() => {
-                            setTab([[], [], [], [], [], []]); // Reset to 6 empty arrays
-                            setNoteSequence([]); // Clear the sequence
-                            setCurrentlyPlayingNotes([]); // Reset any playing notes
-                        }}
-                        className="px-4 py-2 rounded-md text-white bg-gray-600 hover:bg-gray-700 transition-colors"
-                    >
-                        Clear Tab
-                    </button>
-                )}
-
-                {isSpaceMode && (
-                    <div className="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-md opacity-75">
-                        Space Mode Active
-                    </div>
-                )}
-            </div>
-        </>
+        <GuitarTabContainer isLoaded={isLoaded}>
+            <CapoControl capo={capo} setCapo={setCapo}/>
+            <TempoControl tempo={tempo} setTempo={setTempo}/>
+            <TabDisplaySection
+                tab={tab}
+                playNote={playNote}
+                handleDragOver={handleDragOver}
+                handleDrop={handleDrop}
+                currentlyPlayingNotes={currentlyPlayingNotes}
+                updateNote={updateNote}
+            />
+            <FretSelector handleDragStart={handleDragStart}/>
+            <PlaybackControls playAllNotes={playAllNotes}
+                              isPlaying={isPlaying}
+                              isEmptyNoteSequence={noteSequence.length === 0}
+                              stopPlayback={stopPlayback}
+                              isSpaceMode={isSpaceMode}
+                              setTab={setTab}
+                              setNoteSequence={setNoteSequence}
+                              setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}
+            />
+        </GuitarTabContainer>
     );
 };
 
