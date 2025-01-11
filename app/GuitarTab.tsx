@@ -2,7 +2,6 @@
 
 import {FC, useEffect, useState} from 'react';
 import * as Tone from 'tone';
-import {getTransport} from "tone";
 
 interface StringNotes {
     [key: number]: string;
@@ -14,8 +13,7 @@ const Container: FC<{
     children: React.ReactNode;
 }> = ({isLoaded, loadError, children}) => {
     return (
-        <div className="w-full max-w-4xl p-6 bg-white rounded-lg shadow-lg">
-            {/* Header */}
+        <div className="w-full p-6 bg-white rounded-lg shadow-lg">
             <div className="mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Acoustic Guitar Tab Editor</h2>
                 {!isLoaded && (
@@ -108,7 +106,7 @@ const TabDisplaySection: FC<{
                                 )}
                                 {stringNotes[position] === 'space' && (
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                                        <div className="w-2 h-2 bg-gray-400 rounded-full opacity-50"></div>
                                     </div>
                                 )}
                             </div>
@@ -170,7 +168,7 @@ interface Note {
 }
 
 const GuitarTabEditor = () => {
-    // In GuitarTabEditor component
+    const [isSpaceMode, setIsSpaceMode] = useState(false);
     const [currentlyPlayingNotes, setCurrentlyPlayingNotes] = useState<{ stringIndex: number; position: number }[]>([]);
     const [tempo, setTempo] = useState<number>(120); // BPM (beats per minute)
     const [capo, setCapo] = useState<number>(0);
@@ -231,25 +229,61 @@ const GuitarTabEditor = () => {
             },
             onerror: (error) => {
                 console.error("Sample loading error:", error);
-                // Create fallback synth
-                const fallbackSynth = new Tone.Synth({
+
+                // Create better fallback synth with these new settings
+                // In your useEffect where the fallback synth is created
+                const fallbackSynth = new Tone.PolySynth(Tone.Synth, {
                     oscillator: {
-                        type: "sine",
-                        partialCount: 3
+                        type: "sine", // Use sine wave for cleaner sound
+                        partialCount: 2
                     },
                     envelope: {
-                        attack: 0.02,
-                        decay: 0.5,
-                        sustain: 0.3,
-                        release: 1
-                    }
+                        attack: 0.002,  // Very fast attack
+                        decay: 0.2,     // Quick decay
+                        sustain: 0.1,   // Low sustain
+                        release: 0.4    // Moderate release
+                    },
+                    volume: -12 // Lower overall volume
                 }).toDestination();
+
+                // Create and connect effects chain
+                const filter = new Tone.Filter({
+                    frequency: 2000,
+                    type: "lowpass",
+                    rolloff: -24
+                }).toDestination();
+
+                const reverb = new Tone.Reverb({
+                    decay: 2.5,
+                    wet: 0.2
+                }).toDestination();
+
+                const compressor = new Tone.Compressor({
+                    threshold: -20,
+                    ratio: 4,
+                    attack: 0.005,
+                    release: 0.1
+                }).toDestination();
+
+                const chorus = new Tone.Chorus({
+                    frequency: 1.5,
+                    delayTime: 3.5,
+                    depth: 0.7,
+                    wet: 0.2
+                }).start();
+
+                // Connect effects chain
+                fallbackSynth.connect(filter);
+                filter.connect(chorus);
+                chorus.connect(compressor);
+                compressor.connect(reverb);
+
                 setSampler(fallbackSynth);
                 setIsLoaded(true);
             }
         }).toDestination();
 
-        // Add effects chain for more realistic guitar sound
+        // Create effects for the sampler (if real samples load)
         const reverb = new Tone.Reverb({
             decay: 1.5,
             wet: 0.15
@@ -291,10 +325,10 @@ const GuitarTabEditor = () => {
     const playNote = (string: number, fret: string) => {
         if (sampler && isLoaded) {
             const note = getNoteFromFret(string, fret);
-            console.log('Playing note:', note, 'string:', string, 'fret:', fret);
-            const velocity = 0.5 + Math.random() * 0.2;
+            // Lower velocity for single notes
+            const velocity = 0.2 + Math.random() * 0.1;
             const timing = Tone.now();
-            sampler.triggerAttackRelease(note, "2n", timing, velocity);
+            sampler.triggerAttackRelease(note, "4n", timing, velocity);
         }
     };
 
@@ -306,7 +340,7 @@ const GuitarTabEditor = () => {
 
         const delayMs = (60 / tempo) * 1000;
 
-        // Group notes by position to create chords
+        // Group notes by position
         const groupedNotes = noteSequence.reduce((acc, note) => {
             if (!acc[note.position]) {
                 acc[note.position] = [];
@@ -320,10 +354,28 @@ const GuitarTabEditor = () => {
             .sort((a, b) => a - b);
 
         const playChord = (notes: Note[]) => {
-            notes.forEach(note => {
+            // Sort notes by string number (6 to 1) for natural strumming
+            const sortedNotes = [...notes].sort((a, b) => b.stringIndex - a.stringIndex);
+
+            // Play each note in the chord with slight timing differences
+            sortedNotes.forEach((note, index) => {
                 const actualNote = getNoteFromFret(note.stringIndex, note.fret);
-                const velocity = 0.5 + Math.random() * 0.2;
-                sampler.triggerAttackRelease(actualNote, "4n", undefined, velocity);
+
+                // Decrease velocity for more natural sound
+                const baseVelocity = 0.2; // Lower base velocity
+                const velocityVariation = 0.1;
+                const velocity = baseVelocity + Math.random() * velocityVariation;
+
+                // Add slight timing delay between notes in chord
+                const strumDelay = index * 15; // 15ms between each string
+                const timing = Tone.now() + (strumDelay / 1000);
+
+                sampler.triggerAttackRelease(
+                    actualNote,
+                    "4n",
+                    timing,
+                    velocity
+                );
             });
         };
 
@@ -337,7 +389,6 @@ const GuitarTabEditor = () => {
             const position = positions[index];
             const chordNotes = groupedNotes[position];
 
-            // Update all currently playing notes at once
             setCurrentlyPlayingNotes(
                 chordNotes.map(note => ({
                     stringIndex: note.stringIndex,
@@ -370,24 +421,67 @@ const GuitarTabEditor = () => {
         setTimeout(() => document.body.removeChild(dragImage), 0);
     };
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.code === 'Space' && isDragging) {
-            e.preventDefault();
-            setDraggedNote('space');
-        }
-    };
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.code === 'Space') {
+                e.preventDefault(); // Prevent page scroll
+                setDraggedNote('space');
+            }
+        };
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.code === 'Space') {
+                setDraggedNote(null);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, []);
+
 
     useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                setIsSpaceMode(true);
+                setDraggedNote('space');
+            }
+        };
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.code === 'Space') {
+                setIsSpaceMode(false);
+                setDraggedNote(null);
+            }
+        };
+
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isDragging]);
+        window.addEventListener('keyup', handleKeyUp);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
+    }, []);
 
     const handleDrop = (e: React.DragEvent, stringIndex: number, position: number) => {
         e.preventDefault();
         setIsDragging(false);
 
-        if (draggedNote !== null && position < 16) { // Limit to 16 positions
+        if (draggedNote !== null && position < 16) {
             const newTab = [...tab];
+
+            // Ensure the array at stringIndex has enough elements
+            while (newTab[stringIndex].length < position) {
+                newTab[stringIndex].push('space');
+            }
+
             newTab[stringIndex] = [
                 ...newTab[stringIndex].slice(0, position),
                 draggedNote,
@@ -466,6 +560,12 @@ const GuitarTabEditor = () => {
                     >
                         Clear Tab
                     </button>
+                )}
+
+                {isSpaceMode && (
+                    <div className="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-md opacity-75">
+                        Space Mode Active
+                    </div>
                 )}
             </div>
         </>
