@@ -1,3 +1,8 @@
+import GuitarTab from "./GuitarTab";
+import './globals.css';
+
 export default function Page() {
-    return <h1>Hello, Next.js!</h1>
+    return (
+        <GuitarTab/>
+    )
 }
