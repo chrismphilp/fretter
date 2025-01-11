@@ -60,6 +60,7 @@ const TabDisplaySection: FC<{
     handleDragOver: (e: React.DragEvent) => void;
     handleDrop: (e: React.DragEvent, stringIndex: number, position: number) => void;
     currentlyPlayingNotes?: { stringIndex: number; position: number }[];
+    updateNote: (stringIndex: number, position: number, value: string) => void;
 }> = ({
           tab,
           stringNotes,
@@ -67,7 +68,10 @@ const TabDisplaySection: FC<{
           handleDragOver,
           handleDrop,
           currentlyPlayingNotes = [],
+          updateNote,
       }) => {
+    const [editingPosition, setEditingPosition] = useState<{stringIndex: number, position: number} | null>(null);
+
     return (
         <div className="space-y-4 bg-amber-50 p-4 rounded-lg mb-6">
             {tab.map((stringNotes, stringIndex) => (
@@ -83,14 +87,27 @@ const TabDisplaySection: FC<{
                         {[...Array(16)].map((_, position) => (
                             <div
                                 key={position}
-                                className="w-12 h-full border-r border-dashed border-amber-200 relative"
+                                className="w-12 h-full border-r border-dashed border-amber-200 relative cursor-pointer hover:bg-amber-50"
                                 onDrop={(e) => handleDrop(e, stringIndex, position)}
                                 onDragOver={handleDragOver}
+                                onClick={() => {
+                                    if (!stringNotes[position]) {
+                                        setEditingPosition({ stringIndex, position });
+                                    }
+                                }}
                             >
-                                {stringNotes[position] !== undefined && stringNotes[position] !== 'space' && (
+                                {stringNotes[position] !== undefined && stringNotes[position] !== 'space' ? (
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <div
-                                            className={`w-8 h-8 rounded-full flex items-center justify-center text-white cursor-pointer transition-colors ${
+                                        <input
+                                            type="text"
+                                            value={stringNotes[position]}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                if (/^(?:[0-9]|1[0-9]|2[0-4])$/.test(value) || value === '') {
+                                                    updateNote(stringIndex, position, value);
+                                                }
+                                            }}
+                                            className={`w-8 h-8 rounded-full text-center text-white cursor-text transition-colors outline-none ${
                                                 currentlyPlayingNotes?.some(
                                                     note => note.stringIndex === stringIndex &&
                                                         note.position === position
@@ -98,17 +115,36 @@ const TabDisplaySection: FC<{
                                                     ? 'bg-green-600 animate-pulse'
                                                     : 'bg-amber-700 hover:bg-amber-600'
                                             }`}
-                                            onClick={() => playNote(stringIndex, stringNotes[position])}
-                                        >
-                                            {stringNotes[position]}
-                                        </div>
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                playNote(stringIndex, stringNotes[position]);
+                                            }}
+                                        />
                                     </div>
-                                )}
-                                {stringNotes[position] === 'space' && (
+                                ) : editingPosition?.stringIndex === stringIndex &&
+                                editingPosition?.position === position ? (
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="w-2 h-2 bg-gray-400 rounded-full opacity-50"></div>
+                                        <input
+                                            type="text"
+                                            value=""
+                                            autoFocus
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                if (/^(?:[0-9]|1[0-9]|2[0-4])$/.test(value) || value === '') {
+                                                    updateNote(stringIndex, position, value);
+                                                    setEditingPosition(null);
+                                                }
+                                            }}
+                                            onBlur={() => setEditingPosition(null)}
+                                            className="w-8 h-8 rounded-full text-center text-white cursor-text transition-colors outline-none bg-amber-700 hover:bg-amber-600"
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
                                     </div>
-                                )}
+                                ) : stringNotes[position] === 'space' ? (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                                    </div>
+                                ) : null}
                             </div>
                         ))}
                     </div>
@@ -117,6 +153,7 @@ const TabDisplaySection: FC<{
         </div>
     );
 };
+
 const FretSelector: FC<{
     handleDragStart: (e: React.DragEvent, fret: number) => void;
 }> = ({handleDragStart}) => {
@@ -338,36 +375,30 @@ const GuitarTabEditor = () => {
         await Tone.start();
         setIsPlaying(true);
 
-        const delayMs = (60 / tempo) * 1000;
+        // First, let's create a timeline of all positions, including spaces
+        const timeline: { position: number; notes: Note[] }[] = [];
+        const maxPosition = Math.max(...noteSequence.map(note => note.position));
 
-        // Group notes by position
-        const groupedNotes = noteSequence.reduce((acc, note) => {
-            if (!acc[note.position]) {
-                acc[note.position] = [];
-            }
-            acc[note.position].push(note);
-            return acc;
-        }, {} as Record<number, Note[]>);
+        // Fill timeline with empty arrays for each position
+        for (let i = 0; i <= maxPosition; i++) {
+            timeline[i] = { position: i, notes: [] };
+        }
 
-        const positions = Object.keys(groupedNotes)
-            .map(Number)
-            .sort((a, b) => a - b);
+        // Fill in the notes at their correct positions
+        noteSequence.forEach(note => {
+            timeline[note.position].notes.push(note);
+        });
 
         const playChord = (notes: Note[]) => {
             // Sort notes by string number (6 to 1) for natural strumming
             const sortedNotes = [...notes].sort((a, b) => b.stringIndex - a.stringIndex);
 
-            // Play each note in the chord with slight timing differences
             sortedNotes.forEach((note, index) => {
                 const actualNote = getNoteFromFret(note.stringIndex, note.fret);
-
-                // Decrease velocity for more natural sound
-                const baseVelocity = 0.2; // Lower base velocity
+                const baseVelocity = 0.2;
                 const velocityVariation = 0.1;
                 const velocity = baseVelocity + Math.random() * velocityVariation;
-
-                // Add slight timing delay between notes in chord
-                const strumDelay = index * 15; // 15ms between each string
+                const strumDelay = index * 15;
                 const timing = Tone.now() + (strumDelay / 1000);
 
                 sampler.triggerAttackRelease(
@@ -379,28 +410,81 @@ const GuitarTabEditor = () => {
             });
         };
 
-        const playNextChord = (index: number) => {
-            if (index >= positions.length) {
+        const playNextPosition = (index: number) => {
+            if (index >= timeline.length) {
                 setIsPlaying(false);
                 setCurrentlyPlayingNotes([]);
                 return;
             }
 
-            const position = positions[index];
-            const chordNotes = groupedNotes[position];
+            const currentPosition = timeline[index];
 
-            setCurrentlyPlayingNotes(
-                chordNotes.map(note => ({
-                    stringIndex: note.stringIndex,
-                    position: note.position
-                }))
-            );
+            // Only play and show highlighting if there are notes at this position
+            if (currentPosition.notes.length > 0) {
+                setCurrentlyPlayingNotes(
+                    currentPosition.notes.map(note => ({
+                        stringIndex: note.stringIndex,
+                        position: note.position
+                    }))
+                );
+                playChord(currentPosition.notes);
+            } else {
+                // Clear highlighting for spaces
+                setCurrentlyPlayingNotes([]);
+            }
 
-            playChord(chordNotes);
-            setTimeout(() => playNextChord(index + 1), delayMs);
+            const delayMs = (60 / tempo) * 1000;
+            setTimeout(() => playNextPosition(index + 1), delayMs);
         };
 
-        playNextChord(0);
+        playNextPosition(0);
+    };
+
+    const updateNote = (stringIndex: number, position: number, value: string) => {
+        const newTab = [...tab];
+
+        // Ensure array has enough space
+        while (newTab[stringIndex].length <= position) {
+            newTab[stringIndex].push(undefined);
+        }
+
+        if (value === '') {
+            // Remove the note
+            newTab[stringIndex][position] = undefined;
+            // Remove from note sequence
+            setNoteSequence(prev => prev.filter(note =>
+                note.stringIndex !== stringIndex || note.position !== position
+            ));
+        } else {
+            // Update the note at exact position
+            newTab[stringIndex][position] = value;
+
+            // Play the note when added/updated
+            playNote(stringIndex, value);
+
+            // Update note sequence
+            setNoteSequence(prev => {
+                const existingNoteIndex = prev.findIndex(note =>
+                    note.stringIndex === stringIndex && note.position === position
+                );
+                if (existingNoteIndex >= 0) {
+                    const newSequence = [...prev];
+                    newSequence[existingNoteIndex] = {
+                        stringIndex,
+                        position,
+                        fret: value
+                    };
+                    return newSequence;
+                } else {
+                    return [...prev, {
+                        stringIndex,
+                        position,
+                        fret: value
+                    }];
+                }
+            });
+        }
+        setTab(newTab);
     };
 
     const stopPlayback = () => {
@@ -474,6 +558,11 @@ const GuitarTabEditor = () => {
         e.preventDefault();
         setIsDragging(false);
 
+        // Check if there's already a note at this position
+        if (tab[stringIndex][position] !== undefined && tab[stringIndex][position] !== 'space') {
+            return; // If there's already a note, don't allow the drop
+        }
+
         if (draggedNote !== null && position < 16) {
             const newTab = [...tab];
 
@@ -514,11 +603,11 @@ const GuitarTabEditor = () => {
                 <TempoControl tempo={tempo} setTempo={setTempo}/>
                 <TabDisplaySection
                     tab={tab}
-                    stringNotes={stringNotes}
                     playNote={playNote}
                     handleDragOver={handleDragOver}
                     handleDrop={handleDrop}
                     currentlyPlayingNotes={currentlyPlayingNotes}
+                    updateNote={updateNote}
                 />
                 <FretSelector handleDragStart={handleDragStart}/>
             </Container>
