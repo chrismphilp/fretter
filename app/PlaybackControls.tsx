@@ -6,24 +6,23 @@ interface PlaybackControlsProps {
     isPlaying: boolean;
     isEmptyNoteSequence: boolean;
     stopPlayback: () => void;
-    isSpaceMode: boolean;
     setTab: (tab: string[][]) => void;
     setNoteSequence: (notes: Note[]) => void;
     setCurrentlyPlayingNotes: (notes: Note[]) => void;
-    exportTab: () => void;  // Add this
+    exportTab: () => void;
 }
 
-const PlaybackControls: FC<PlaybackControlsProps> = ({
-                                                         playAllNotes,
-                                                         isPlaying,
-                                                         isEmptyNoteSequence,
-                                                         stopPlayback,
-                                                         isSpaceMode,
-                                                         setTab,
-                                                         setNoteSequence,
-                                                         setCurrentlyPlayingNotes,
-                                                         exportTab,  // Add this
-                                                     }) => {
+const PlaybackControls: FC<PlaybackControlsProps> = (
+    {
+        playAllNotes,
+        isPlaying,
+        isEmptyNoteSequence,
+        stopPlayback,
+        setTab,
+        setNoteSequence,
+        setCurrentlyPlayingNotes,
+        exportTab,  // Add this
+    }) => {
     return (
         <div className="mt-6 flex space-x-4">
             <button

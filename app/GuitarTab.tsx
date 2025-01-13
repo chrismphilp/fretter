@@ -21,7 +21,6 @@ export interface Note {
 }
 
 const GuitarTabEditor = () => {
-    const [isSpaceMode, setIsSpaceMode] = useState(false);
     const [currentlyPlayingNotes, setCurrentlyPlayingNotes] = useState<Note[]>([]);
     const [tempo, setTempo] = useState<number>(120); // BPM (beats per minute)
     const [capo, setCapo] = useState<number>(0);
@@ -414,7 +413,7 @@ const GuitarTabEditor = () => {
         }
 
         // Create and download the file
-        const blob = new Blob([tabText], { type: 'text/plain' });
+        const blob = new Blob([tabText], {type: 'text/plain'});
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -471,32 +470,6 @@ const GuitarTabEditor = () => {
         };
     }, []);
 
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.code === 'Space') {
-                e.preventDefault();
-                setIsSpaceMode(true);
-                setDraggedNote('space');
-            }
-        };
-
-        const handleKeyUp = (e: KeyboardEvent) => {
-            if (e.code === 'Space') {
-                setIsSpaceMode(false);
-                setDraggedNote(null);
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        window.addEventListener('keyup', handleKeyUp);
-
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('keyup', handleKeyUp);
-        };
-    }, []);
-
     const handleDrop = (e: DragEvent, stringIndex: number, position: number) => {
         e.preventDefault();
 
@@ -532,7 +505,6 @@ const GuitarTabEditor = () => {
         }
     };
 
-
     const handleDragOver = (e) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'copy';
@@ -555,7 +527,6 @@ const GuitarTabEditor = () => {
                               isPlaying={isPlaying}
                               isEmptyNoteSequence={noteSequence.length === 0}
                               stopPlayback={stopPlayback}
-                              isSpaceMode={isSpaceMode}
                               setTab={setTab}
                               setNoteSequence={setNoteSequence}
                               setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}
