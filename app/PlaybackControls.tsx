@@ -1,4 +1,4 @@
-import {Note} from "./GuitarTab";
+import {Note, Tab} from "./GuitarTabEditor";
 import {FC} from "react";
 
 interface PlaybackControlsProps {
@@ -6,7 +6,7 @@ interface PlaybackControlsProps {
     isPlaying: boolean;
     isEmptyNoteSequence: boolean;
     stopPlayback: () => void;
-    setTab: (tab: string[][]) => void;
+    setTab: (tab: Tab) => void;
     setNoteSequence: (notes: Note[]) => void;
     setCurrentlyPlayingNotes: (notes: Note[]) => void;
     exportTab: () => void;
@@ -50,7 +50,12 @@ const PlaybackControls: FC<PlaybackControlsProps> = (
                 <>
                     <button
                         onClick={() => {
-                            setTab(Array(6).fill([]));
+                            setTab({
+                                _id: '',
+                                tempo: 120,
+                                capo: 0,
+                                groups: Array(6).fill([]),
+                            });
                             setNoteSequence([]);
                             setCurrentlyPlayingNotes([]);
                         }}

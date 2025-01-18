@@ -1,4 +1,4 @@
-import GuitarTab from "./GuitarTab";
+import GuitarTab from "./GuitarTabEditor";
 import {Metadata} from 'next'
 import './globals.css';
 

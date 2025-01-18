@@ -1,130 +1,153 @@
-import {DragEvent, FC, useState, KeyboardEvent} from "react";
-import {Note} from "./GuitarTab";
+import {DragEvent, FC, KeyboardEvent, useState} from "react";
+import {Note, Tab} from "./GuitarTabEditor";
 
 interface TabDisplaySectionProps {
-    tab: string[][];
+    tab: Tab;
     playNote: (string: number, fret: string, type?: 'h' | 'p') => void;
     handleDragOver: (e: DragEvent) => void;
-    handleDrop: (e: DragEvent, stringIndex: number, position: number) => void;
-    currentlyPlayingNotes?: Note[];
-    updateNote: (stringIndex: number, position: number, value: string, type?: 'h' | 'p') => void;
+    handleDrop: (e: DragEvent, stringIndex: number, position: number, groupIndex: number) => void;
+    currentlyPlayingNotes: Note[];
+    updateNote: (stringIndex: number, position: number, groupIndex: number, value: string, type?: 'h' | 'p') => void;
 }
 
 interface EditingPosition {
     stringIndex: number;
     position: number;
+    groupIndex: number;
 }
 
-const TabDisplaySection: FC<TabDisplaySectionProps> = ({
-          tab,
-          playNote,
-          handleDragOver,
-          handleDrop,
-          currentlyPlayingNotes = [],
-          updateNote,
-      }) => {
+const TabDisplaySection: FC<TabDisplaySectionProps> = (
+    {
+        tab,
+        playNote,
+        handleDragOver,
+        handleDrop,
+        currentlyPlayingNotes = [],
+        updateNote,
+    }) => {
     const [editingPosition, setEditingPosition] = useState<EditingPosition | null>(null);
 
-    const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>, stringIndex: number, position: number) => {
+    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>, stringIndex: number, position: number, groupIndex: number) => {
         if (e.key.toLowerCase() === 'h') {
             e.preventDefault();
-            updateNote(stringIndex, position, tab[stringIndex][position], 'h');
+            const stringNotes = tab.groups[groupIndex].notes[stringIndex] || [];
+            const note = stringNotes.find(n => n.position === position);
+            if (note) {
+                updateNote(stringIndex, position, groupIndex, note.fret, 'h');
+            }
         } else if (e.key.toLowerCase() === 'p') {
             e.preventDefault();
-            updateNote(stringIndex, position, tab[stringIndex][position], 'p');
+            const stringNotes = tab.groups[groupIndex].notes[stringIndex] || [];
+            const note = stringNotes.find(n => n.position === position);
+            if (note) {
+                updateNote(stringIndex, position, groupIndex, note.fret, 'p');
+            }
         } else if (e.key === 'Backspace' || e.key === 'Delete') {
             e.preventDefault();
-            updateNote(stringIndex, position, '');
+            updateNote(stringIndex, position, groupIndex, '');
             setEditingPosition(null);
         }
     };
 
-    const handleClick = (stringIndex: number, position: number) => {
-        if (tab[stringIndex][position] === 'space') {
-            // When clicking a space, immediately clear it and set up for editing
-            updateNote(stringIndex, position, '');
+    const handleClick = (stringIndex: number, position: number, groupIndex: number) => {
+        const stringNotes = tab.groups[groupIndex].notes[stringIndex] || [];
+        const note = stringNotes.find(n => n.position === position);
+        if (note) {
+            updateNote(stringIndex, position, groupIndex, '');
         }
-        setEditingPosition({stringIndex, position});
+        setEditingPosition({stringIndex, position, groupIndex});
     };
 
     return (
         <div className="w-full bg-blue-50 p-6 rounded-lg mb-6">
-            <div className="grid grid-rows-6 gap-3">
-                {tab.map((stringNotes, stringIndex) => (
-                    <div key={stringIndex} className="flex items-center space-x-4" onDragOver={handleDragOver}>
-                        <span className="w-20 font-mono text-gray-700 text-center">
-                            {`${6 - stringIndex}`}
-                        </span>
-                        <div className="flex-1 h-16 bg-white border border-gray-200 rounded-lg flex">
-                            {[...Array(16)].map((_, position) => (
-                                <div
-                                    key={position}
-                                    className="flex-1 h-full border-r border-dashed border-blue-200 relative cursor-pointer hover:bg-blue-50 transition-colors"
-                                    onDrop={(e) => handleDrop(e, stringIndex, position)}
-                                    onDragOver={handleDragOver}
-                                    onClick={() => handleClick(stringIndex, position)}
-                                >
-                                    {editingPosition?.stringIndex === stringIndex &&
-                                    editingPosition?.position === position ? (
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <input
-                                                type="text"
-                                                value=""
-                                                autoFocus
-                                                onChange={(e) => {
-                                                    const value = e.target.value;
-                                                    if (/^(?:[0-9]|1[0-9]|2[0-4])$/.test(value) || value === '') {
-                                                        updateNote(stringIndex, position, value);
-                                                        setEditingPosition(null);
-                                                    }
-                                                }}
-                                                onKeyDown={(e) => handleKeyDown(e, stringIndex, position)}
-                                                onBlur={() => setEditingPosition(null)}
-                                                className="w-10 h-10 rounded-full text-center text-white cursor-text transition-colors outline-none bg-blue-700 hover:bg-blue-600"
-                                            />
-                                        </div>
-                                    ) : stringNotes[position] !== undefined && stringNotes[position] !== 'space' ? (
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <input
-                                                type="text"
-                                                value={stringNotes[position]}
-                                                onChange={(e) => {
-                                                    const value = e.target.value;
-                                                    if (/^(?:[0-9]|1[0-9]|2[0-4])$/.test(value) || value === '') {
-                                                        updateNote(stringIndex, position, value);
-                                                    }
-                                                }}
-                                                onKeyDown={(e) => handleKeyDown(e, stringIndex, position)}
-                                                className={`w-10 h-10 rounded-full text-center text-white cursor-text transition-colors outline-none ${
-                                                    currentlyPlayingNotes?.some(
-                                                        note => note.stringIndex === stringIndex &&
-                                                            note.position === position
-                                                    )
-                                                        ? 'bg-green-600 animate-pulse'
-                                                        : 'bg-blue-700 hover:bg-blue-600'
-                                                }`}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    playNote(stringIndex, stringNotes[position]);
-                                                }}
-                                            />
-                                        </div>
-                                    ) : stringNotes[position] === 'space' ? (
-                                        <div
-                                            className="absolute inset-0 flex items-center justify-center cursor-pointer">
+            {tab.groups.map((group) => (
+                <div key={group._id} className="mb-8">
+                    <h3 className="text-gray-700 mb-2">Section {group.groupIndex + 1}</h3>
+                    <div className="grid grid-rows-6 gap-3">
+                        {[...Array(6)].map((_, stringIndex) => (
+                            <div key={`${group._id}-${stringIndex}`} className="flex items-center space-x-4"
+                                 onDragOver={handleDragOver}>
+                                <span className="w-20 font-mono text-gray-700 text-center">
+                                    {`${6 - stringIndex}`}
+                                </span>
+                                <div className="flex-1 h-16 bg-white border border-gray-200 rounded-lg flex">
+                                    {[...Array(16)].map((_, position) => {
+                                        const stringNotes = group.notes[stringIndex] || [];
+                                        const note = stringNotes.find(n => n.position === position);
+
+                                        return (
                                             <div
-                                                className="w-2 h-2 bg-gray-300 rounded-full hover:bg-gray-400 transition-colors"
-                                                onKeyDown={(e) => handleKeyDown(e, stringIndex, position)}
-                                                tabIndex={0}
-                                            />
-                                        </div>
-                                    ) : null}
+                                                key={`${group._id}-${stringIndex}-${position}`}
+                                                className="flex-1 h-full border-r border-dashed border-blue-200 relative cursor-pointer hover:bg-blue-50 transition-colors"
+                                                onDrop={(e) => handleDrop(e, stringIndex, position, group.groupIndex)}
+                                                onDragOver={handleDragOver}
+                                                onClick={() => handleClick(stringIndex, position, group.groupIndex)}
+                                            >
+                                                {editingPosition?.stringIndex === stringIndex &&
+                                                editingPosition?.position === position &&
+                                                editingPosition?.groupIndex === group.groupIndex ? (
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <input
+                                                            type="text"
+                                                            value=""
+                                                            autoFocus
+                                                            onChange={(e) => {
+                                                                const value = e.target.value;
+                                                                if (/^(?:[0-9]|1[0-9]|2[0-4])$/.test(value) || value === '') {
+                                                                    updateNote(stringIndex, position, group.groupIndex, value);
+                                                                    setEditingPosition(null);
+                                                                }
+                                                            }}
+                                                            onKeyDown={(e) => handleKeyDown(e, stringIndex, position, group.groupIndex)}
+                                                            onBlur={() => setEditingPosition(null)}
+                                                            className="w-10 h-10 rounded-full text-center text-white cursor-text transition-colors outline-none bg-blue-700 hover:bg-blue-600"
+                                                        />
+                                                    </div>
+                                                ) : note ? (
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <div className="relative">
+                                                            <input
+                                                                type="text"
+                                                                value={note.fret}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value;
+                                                                    if (/^(?:[0-9]|1[0-9]|2[0-4])$/.test(value) || value === '') {
+                                                                        updateNote(stringIndex, position, group.groupIndex, value);
+                                                                    }
+                                                                }}
+                                                                onKeyDown={(e) => handleKeyDown(e, stringIndex, position, group.groupIndex)}
+                                                                className={`w-10 h-10 rounded-full text-center text-white cursor-text transition-colors outline-none ${
+                                                                    currentlyPlayingNotes?.some(
+                                                                        n => n.stringIndex === stringIndex &&
+                                                                            n.position === position &&
+                                                                            n.tabGroupId === group._id
+                                                                    )
+                                                                        ? 'bg-green-600 animate-pulse'
+                                                                        : 'bg-blue-700 hover:bg-blue-600'
+                                                                }`}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    playNote(stringIndex, note.fret);
+                                                                }}
+                                                            />
+                                                            {note.type && (
+                                                                <span
+                                                                    className="absolute -top-4 left-1/2 transform -translate-x-1/2 text-xs font-bold text-blue-700">
+                                                                    {note.type.toUpperCase()}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                            ))}
-                        </div>
+                            </div>
+                        ))}
                     </div>
-                ))}
-            </div>
+                </div>
+            ))}
         </div>
     );
 };

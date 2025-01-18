@@ -8,16 +8,35 @@ import TabDisplaySection from "./TabDisplaySection";
 import TempoControl from "./TempoControl";
 import FretSelector from "./FretSelector";
 import PlaybackControls from "./PlaybackControls";
+import AddSectionButton from "./AddTabSection";
+import {v4} from 'uuid';
 
 interface StringNotes {
     [key: number]: string;
 }
 
+export interface Tab {
+    _id: string;
+    groups: TabGroup[];
+    tempo: number;
+    capo: number;
+}
+
+export interface TabGroup {
+    _id: string;
+    tabId: string;
+    groupIndex: number;
+    notes: Note[][];
+}
+
 export interface Note {
+    _id: string;
+    tabGroupId?: string;
     stringIndex: number;
     fret: string;
     position: number;
-    type?: 'h' | 'p';
+    absolutePosition: number;
+    type?: 'h' | 'p' | 'space';
 }
 
 const GuitarTabEditor: FC = () => {
@@ -31,14 +50,25 @@ const GuitarTabEditor: FC = () => {
     const [noteSequence, setNoteSequence] = useState<Note[]>([]);
     const playbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const [tab, setTab] = useState<string[][]>([
-        [], // String 6 (Low E)
-        [], // String 5 (A)
-        [], // String 4 (D)
-        [], // String 3 (G)
-        [], // String 2 (B)
-        [], // String 1 (High E)
-    ]);
+    const tabId = v4();
+    const [tabData, setTabData] = useState<Tab>({
+        _id: tabId,
+        groups: [{
+            _id: v4(),
+            tabId: tabId,
+            groupIndex: 0,
+            notes: [
+                [], // String 6 (Low E)
+                [], // String 5 (A)
+                [], // String 4 (D)
+                [], // String 3 (G)
+                [], // String 2 (B)
+                [], // String 1 (High E)
+            ]
+        }],
+        tempo: 120,
+        capo: 0
+    });
 
     const stringNotes: StringNotes = {
         0: 'E4', // High E
@@ -206,8 +236,21 @@ const GuitarTabEditor: FC = () => {
         await start();
         setIsPlaying(true);
 
-        // First, let's create a timeline of all positions, including spaces
+        // Sort notes by absolute position
+        const sortedNotes = [...noteSequence].sort((a, b) =>
+            a.absolutePosition - b.absolutePosition
+        );
+
+        // Group notes by absolute position
         const timeline: { position: number; notes: Note[] }[] = [];
+        sortedNotes.forEach(note => {
+            const pos = note.absolutePosition;
+            if (!timeline[pos]) {
+                timeline[pos] = {position: pos, notes: []};
+            }
+            timeline[pos].notes.push(note);
+        });
+
         const maxPosition = Math.max(...noteSequence.map(note => note.position));
 
         // Fill timeline with empty arrays for each position
@@ -264,6 +307,8 @@ const GuitarTabEditor: FC = () => {
             if (currentPosition.notes.length > 0) {
                 setCurrentlyPlayingNotes(
                     currentPosition.notes.map(note => ({
+                        _id: note._id,
+                        absolutePosition: note.absolutePosition,
                         stringIndex: note.stringIndex,
                         fret: note.fret,
                         position: note.position,
@@ -283,72 +328,73 @@ const GuitarTabEditor: FC = () => {
         playNextPosition(0);
     };
 
-    const updateNote = (stringIndex: number, position: number, value: string, type?: 'h' | 'p') => {
-        const newTab = [...tab];
-        newTab[stringIndex] = [...tab[stringIndex]];
+    const updateNote = (stringIndex: number, position: number, groupIndex: number, value: string, type?: 'h' | 'p') => {
+        setTabData(prev => {
+            const newGroups = [...prev.groups];
+            const targetGroup = {...newGroups[groupIndex]};
 
-
-        if (value === '') {
-            // Clear the current position
-            newTab[stringIndex][position] = undefined;
-
-            // Cleanup the row - remove trailing spaces and undefined values
-            while (
-                newTab[stringIndex].length > 0 &&
-                (newTab[stringIndex][newTab[stringIndex].length - 1] === 'space' ||
-                    newTab[stringIndex][newTab[stringIndex].length - 1] === undefined)
-                ) {
-                newTab[stringIndex].pop();
-            }
-
-            // Update note sequence
-            setNoteSequence(prev => prev.filter(note =>
-                note.stringIndex !== stringIndex || note.position !== position
-            ));
-        } else {
-            // Adding or updating a note
-            // Fill any gaps with spaces up to the position
-            while (newTab[stringIndex].length < position) {
-                newTab[stringIndex].push('space');
-            }
-
-            newTab[stringIndex][position] = value;
-
-            // Play the note
-            playNote(stringIndex, value, type);
-
-            // Update note sequence
-            setNoteSequence(prev => {
-                const existingNoteIndex = prev.findIndex(note =>
-                    note.stringIndex === stringIndex && note.position === position
+            if (value === '') {
+                // Remove note if it exists
+                targetGroup.notes = targetGroup.notes.map((stringNotes, idx) =>
+                    idx === stringIndex
+                        ? stringNotes.filter(note => note.position !== position)
+                        : stringNotes
                 );
-                if (existingNoteIndex >= 0) {
-                    const newSequence = [...prev];
-                    newSequence[existingNoteIndex] = {
-                        stringIndex,
-                        position,
-                        fret: value,
-                        type
-                    };
-                    return newSequence;
-                } else {
-                    return [...prev, {
-                        stringIndex,
-                        position,
-                        fret: value,
-                        type
-                    }];
-                }
-            });
-        }
+            } else {
+                const absolutePosition = (groupIndex * 16) + position;
+                const newNote: Note = {
+                    _id: crypto.randomUUID(), // Generate new ID for the note
+                    tabGroupId: targetGroup._id,
+                    stringIndex,
+                    position,
+                    absolutePosition,
+                    fret: value,
+                    type
+                };
 
-        setTab(newTab);
+                // Ensure string array exists
+                if (!targetGroup.notes[stringIndex]) {
+                    targetGroup.notes[stringIndex] = [];
+                }
+
+                // Remove existing note at this position if it exists
+                targetGroup.notes[stringIndex] = targetGroup.notes[stringIndex].filter(
+                    note => note.position !== position
+                );
+
+                // Add the new note
+                targetGroup.notes[stringIndex].push(newNote);
+
+                // Play the note
+                playNote(stringIndex, value, type);
+            }
+
+            newGroups[groupIndex] = targetGroup;
+            return {
+                ...prev,
+                groups: newGroups
+            };
+        });
+    };
+
+    const addNewSection = () => {
+        setTabData(prev => ({
+            ...prev,
+            groups: [
+                ...prev.groups,
+                {
+                    _id: crypto.randomUUID(),
+                    tabId: prev._id,
+                    groupIndex: prev.groups.length,
+                    notes: [[], [], [], [], [], []] // Initialize empty arrays for each string
+                }
+            ]
+        }));
     };
 
     const exportTab = () => {
         let tabText = "Guitar Tab\n\n";
 
-        // Add capo information if set
         if (capo > 0) {
             tabText += `Capo: ${capo}\n\n`;
         }
@@ -356,63 +402,59 @@ const GuitarTabEditor: FC = () => {
         const stringLabels = ['e|', 'B|', 'G|', 'D|', 'A|', 'E|'];
         const stringLines = Array(6).fill('').map((_, i) => stringLabels[i]);
 
-        // Find the maximum position used in the tab
-        const maxPosition = Math.max(...tab.map(string => string.length));
-
-        // Fill in the tab content
-        for (let position = 0; position < maxPosition; position++) {
-            for (let stringIndex = 0; stringIndex < 6; stringIndex++) {
-                // Find if there's a note in the sequence at this position
-                const noteInSequence = noteSequence.find(note =>
-                    note.stringIndex === (5 - stringIndex) &&
-                    note.position === position
-                );
-
-                const note = tab[5 - stringIndex][position];
-
-                if (note === undefined || note === '') {
-                    stringLines[stringIndex] += '-';
-                } else if (note === 'space') {
-                    stringLines[stringIndex] += ' ';
-                } else {
-                    // Format based on technique
-                    if (noteInSequence?.type === 'h') {
-                        // Hammer-on: 5h7
-                        const nextNote = noteSequence.find(n =>
-                            n.stringIndex === (5 - stringIndex) &&
-                            n.position === position + 1
-                        );
-                        if (nextNote) {
-                            stringLines[stringIndex] += `${note}h${nextNote.fret}`;
-                            position++; // Skip the next position as we've included it
-                        } else {
-                            stringLines[stringIndex] += note;
-                        }
-                    } else if (noteInSequence?.type === 'p') {
-                        // Pull-off: [7]
-                        stringLines[stringIndex] += `[${note}]`;
-                    } else {
-                        // Regular note
-                        stringLines[stringIndex] += note;
-                    }
-                }
-
-                // Add spacing between notes
-                stringLines[stringIndex] += '-';
+        // Process each group
+        tabData.groups.forEach((group, groupIndex) => {
+            // Add group separator if not first group
+            if (groupIndex > 0) {
+                stringLines.forEach((_, i) => {
+                    stringLines[i] += '||';
+                });
             }
-        }
 
-        // Combine all strings
+            // Get notes for this group
+            for (let position = 0; position < 16; position++) {
+                for (let stringIndex = 0; stringIndex < 6; stringIndex++) {
+                    // Find note at this position for this string
+                    const stringNotes = group.notes[5 - stringIndex] || [];
+                    const note = stringNotes.find(n => n.position === position);
+
+                    if (!note) {
+                        stringLines[stringIndex] += '-';
+                    } else {
+                        if (note.type === 'h') {
+                            // Find next note for hammer-on
+                            const nextNote = stringNotes.find(n => n.position === position + 1);
+                            if (nextNote) {
+                                stringLines[stringIndex] += `${note.fret}h${nextNote.fret}`;
+                                position++; // Skip next position
+                            } else {
+                                stringLines[stringIndex] += note.fret;
+                            }
+                        } else if (note.type === 'p') {
+                            stringLines[stringIndex] += `[${note.fret}]`;
+                        } else {
+                            stringLines[stringIndex] += note.fret;
+                        }
+                    }
+
+                    stringLines[stringIndex] += '-';
+                }
+            }
+        });
+
         tabText += stringLines.join('\n') + '\n';
 
-        // Add legend
-        if (noteSequence.some(note => note.type === 'h' || note.type === 'p')) {
+        // Add legend if techniques are used
+        if (tabData.groups.some(group =>
+            group.notes.some(stringNotes =>
+                stringNotes.some(note => note.type === 'h' || note.type === 'p')
+            )
+        )) {
             tabText += '\nLegend:\n';
             tabText += '5h7 - hammer-on from 5 to 7\n';
             tabText += '[5] - pull-off\n';
         }
 
-        // Create and download the file
         const blob = new Blob([tabText], {type: 'text/plain'});
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -436,7 +478,7 @@ const GuitarTabEditor: FC = () => {
         }
     };
 
-    const handleDragStart = (e, fret) => {
+    const handleDragStart = (e: DragEvent, fret: string) => {
         setDraggedNote(fret);
         e.dataTransfer.setData('text/plain', fret);
         const dragImage = document.createElement('div');
@@ -470,42 +512,24 @@ const GuitarTabEditor: FC = () => {
         };
     }, []);
 
-    const handleDrop = (e: DragEvent, stringIndex: number, position: number) => {
+    const handleDrop = (e: DragEvent, stringIndex: number, position: number, groupIndex: number) => {
         e.preventDefault();
 
+        const targetGroup = tabData.groups[groupIndex];
+        if (!targetGroup) return;
+
         // Check if there's already a note at this position
-        if (tab[stringIndex][position] !== undefined && tab[stringIndex][position] !== 'space') {
-            return; // If there's already a note, don't allow the drop
+        if (targetGroup.notes[stringIndex][position] !== undefined &&
+            targetGroup.notes[stringIndex][position].type !== 'space') {
+            return;
         }
 
         if (draggedNote !== null && position < 16) {
-            const newTab = [...tab];
-
-            // Ensure the array at stringIndex has enough elements
-            while (newTab[stringIndex].length < position) {
-                newTab[stringIndex].push('space');
-            }
-
-            newTab[stringIndex] = [
-                ...newTab[stringIndex].slice(0, position),
-                draggedNote,
-                ...newTab[stringIndex].slice(position + 1)
-            ];
-            setTab(newTab);
-
-            // Only add to sequence if it's not a space
-            if (draggedNote !== 'space') {
-                setNoteSequence(prev => [...prev, {
-                    stringIndex,
-                    fret: draggedNote,
-                    position
-                }]);
-                playNote(stringIndex, draggedNote);
-            }
+            updateNote(stringIndex, position, groupIndex, draggedNote);
         }
     };
 
-    const handleDragOver = (e) => {
+    const handleDragOver = (e: DragEvent) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = 'copy';
     };
@@ -515,7 +539,7 @@ const GuitarTabEditor: FC = () => {
             <CapoControl capo={capo} setCapo={setCapo}/>
             <TempoControl tempo={tempo} setTempo={setTempo}/>
             <TabDisplaySection
-                tab={tab}
+                tab={tabData}
                 playNote={playNote}
                 handleDragOver={handleDragOver}
                 handleDrop={handleDrop}
@@ -523,11 +547,12 @@ const GuitarTabEditor: FC = () => {
                 updateNote={updateNote}
             />
             <FretSelector handleDragStart={handleDragStart}/>
+            <AddSectionButton onAdd={addNewSection}/>
             <PlaybackControls playAllNotes={playAllNotes}
                               isPlaying={isPlaying}
                               isEmptyNoteSequence={noteSequence.length === 0}
                               stopPlayback={stopPlayback}
-                              setTab={setTab}
+                              setTab={setTabData}
                               setNoteSequence={setNoteSequence}
                               setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}
                               exportTab={exportTab}

@@ -1,7 +1,7 @@
 import {DragEvent, FC} from "react";
 
 interface FretSelectorProps {
-    handleDragStart: (e: DragEvent, fret: number) => void;
+    handleDragStart: (e: DragEvent, fret: string) => void;
 }
 
 const FretSelector: FC<FretSelectorProps> = ({handleDragStart}) => {
@@ -15,7 +15,7 @@ const FretSelector: FC<FretSelectorProps> = ({handleDragStart}) => {
                     <div
                         key={i}
                         draggable
-                        onDragStart={(e) => handleDragStart(e, i)}
+                        onDragStart={(e) => handleDragStart(e, i.toString())}
                         className="w-8 h-8 bg-blue-700 rounded-full flex items-center justify-center text-white cursor-move hover:bg-blue-600 transition-colors"
                     >
                         {i}
