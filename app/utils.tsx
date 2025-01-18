@@ -1,5 +1,6 @@
 import {Note, Tab, TabGroup} from "./GuitarTabEditor";
 import {now, Sampler, start} from "tone";
+import {v4} from "uuid";
 
 interface StringNotes {
     [key: number]: string;
@@ -7,11 +8,32 @@ interface StringNotes {
 
 const stringNotes: StringNotes = {
     0: 'E4', // High E
-    1: 'B3',
-    2: 'G3',
-    3: 'D3',
-    4: 'A2',
+    1: 'B3', // String 5 (A)
+    2: 'G3', // String 4 (D)
+    3: 'D3', // String 3 (G)
+    4: 'A2', // String 2 (B)
     5: 'E2', // Low E
+};
+
+const emptyTab = (tabId: string): Tab => {
+    return {
+        _id: tabId,
+        tempo: 120,
+        capo: 0,
+        groups: [{
+            _id: v4(),
+            tabId: tabId,
+            groupIndex: 0,
+            notes: [
+                [], // String 6 (Low E)
+                [], // String 5 (A)
+                [], // String 4 (D)
+                [], // String 3 (G)
+                [], // String 2 (B)
+                [], // String 1 (High E)
+            ]
+        }],
+    }
 };
 
 const getNoteFromFret = (capo: number, string: number, fret: string) => {
@@ -161,6 +183,7 @@ const playTabGroup = async (
 };
 
 export {
+    emptyTab,
     getNoteFromFret,
     playMusicalNote,
     playAllMusicalNotes,

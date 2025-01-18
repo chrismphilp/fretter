@@ -7,10 +7,10 @@ import CapoControl from "./CapoControl";
 import TabDisplaySection from "./TabDisplaySection";
 import TempoControl from "./TempoControl";
 import FretSelector from "./FretSelector";
-import PlaybackControls from "./PlaybackControls";
+import PlaybackControls from "./actions/PlaybackControls";
 import AddSectionButton from "./AddTabSection";
 import {v4} from 'uuid';
-import {playAllMusicalNotes, playMusicalNote} from "./utils";
+import {emptyTab, playAllMusicalNotes, playMusicalNote} from "./utils";
 
 export interface Tab {
     _id: string;
@@ -44,25 +44,7 @@ const GuitarTabEditor: FC = () => {
     const [isPlaying, setIsPlaying] = useState(false);
     const playbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    const tabId = v4();
-    const [tab, setTab] = useState<Tab>({
-        _id: tabId,
-        groups: [{
-            _id: v4(),
-            tabId: tabId,
-            groupIndex: 0,
-            notes: [
-                [], // String 6 (Low E)
-                [], // String 5 (A)
-                [], // String 4 (D)
-                [], // String 3 (G)
-                [], // String 2 (B)
-                [], // String 1 (High E)
-            ]
-        }],
-        tempo: 120,
-        capo: 0
-    });
+    const [tab, setTab] = useState<Tab>(emptyTab(v4()));
 
     useEffect(() => {
         // Using the provided acoustic guitar samples
@@ -183,6 +165,7 @@ const GuitarTabEditor: FC = () => {
     }
 
     const playAllNotes = async () => {
+        setIsPlaying(true);
         await playAllMusicalNotes(sampler, tab, isLoaded, isPlaying, setCurrentlyPlayingNotes, playbackTimeoutRef);
     }
 
