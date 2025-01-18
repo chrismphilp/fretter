@@ -1,9 +1,11 @@
 import {FC, ReactNode} from "react";
 
-const GuitarTabContainer: FC<{
+interface GuitarTabContainerProps {
     isLoaded: boolean;
     children: ReactNode;
-}> = ({isLoaded, children}) => {
+}
+
+const GuitarTabContainer: FC<GuitarTabContainerProps> = ({isLoaded, children}) => {
     return (
         <div className="w-full p-5">
             <div className="mb-6">

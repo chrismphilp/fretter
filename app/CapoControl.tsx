@@ -1,9 +1,11 @@
 import {FC} from "react";
 
-const CapoControl: FC<{
+interface CapoControlProps {
     capo: number;
     setCapo: (capo: number) => void;
-}> = ({capo, setCapo}) => {
+}
+
+const CapoControl: FC<CapoControlProps> = ({capo, setCapo}) => {
     return (
         <div className="flex items-center space-x-4 mb-6">
             <label className="w-20 text-gray-700">Capo:</label>
@@ -13,7 +15,6 @@ const CapoControl: FC<{
                 max="15"
                 value={capo}
                 onChange={(e) => {
-                    // Convert to number and remove leading zeros
                     const value = parseInt(e.target.value) || 0;
                     setCapo(value);
                 }}

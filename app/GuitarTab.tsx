@@ -1,6 +1,6 @@
 "use client";
 
-import {DragEvent, useEffect, useRef, useState} from 'react';
+import {DragEvent, FC, useEffect, useRef, useState} from 'react';
 import {Chorus, Compressor, Filter, now, PolySynth, Reverb, Sampler, start, Synth} from "tone";
 import GuitarTabContainer from "./GuitarTabContainer";
 import CapoControl from "./CapoControl";
@@ -20,7 +20,7 @@ export interface Note {
     type?: 'h' | 'p';
 }
 
-const GuitarTabEditor = () => {
+const GuitarTabEditor: FC = () => {
     const [currentlyPlayingNotes, setCurrentlyPlayingNotes] = useState<Note[]>([]);
     const [tempo, setTempo] = useState<number>(120); // BPM (beats per minute)
     const [capo, setCapo] = useState<number>(0);

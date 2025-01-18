@@ -1,14 +1,21 @@
 import {DragEvent, FC, useState, KeyboardEvent} from "react";
 import {Note} from "./GuitarTab";
 
-const TabDisplaySection: FC<{
+interface TabDisplaySectionProps {
     tab: string[][];
     playNote: (string: number, fret: string, type?: 'h' | 'p') => void;
     handleDragOver: (e: DragEvent) => void;
     handleDrop: (e: DragEvent, stringIndex: number, position: number) => void;
     currentlyPlayingNotes?: Note[];
     updateNote: (stringIndex: number, position: number, value: string, type?: 'h' | 'p') => void;
-}> = ({
+}
+
+interface EditingPosition {
+    stringIndex: number;
+    position: number;
+}
+
+const TabDisplaySection: FC<TabDisplaySectionProps> = ({
           tab,
           playNote,
           handleDragOver,
@@ -16,7 +23,7 @@ const TabDisplaySection: FC<{
           currentlyPlayingNotes = [],
           updateNote,
       }) => {
-    const [editingPosition, setEditingPosition] = useState<{ stringIndex: number, position: number } | null>(null);
+    const [editingPosition, setEditingPosition] = useState<EditingPosition | null>(null);
 
     const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>, stringIndex: number, position: number) => {
         if (e.key.toLowerCase() === 'h') {

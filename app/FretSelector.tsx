@@ -1,8 +1,10 @@
 import {DragEvent, FC} from "react";
 
-const FretSelector: FC<{
+interface FretSelectorProps {
     handleDragStart: (e: DragEvent, fret: number) => void;
-}> = ({handleDragStart}) => {
+}
+
+const FretSelector: FC<FretSelectorProps> = ({handleDragStart}) => {
     return (
         <div className="p-4 bg-blue-100 rounded-lg">
             <h3 className="text-sm font-semibold mb-2 text-gray-800">

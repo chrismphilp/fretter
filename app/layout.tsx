@@ -1,6 +1,10 @@
 import React from "react";
 
-export default function RootLayout({children,}: { children: React.ReactNode }) {
+interface RootLayoutProps {
+    children: React.ReactNode;
+}
+
+export default function RootLayout({children}: RootLayoutProps) {
     return (
         <>
             <link rel="icon" href="/favicon.ico" sizes="any"/>

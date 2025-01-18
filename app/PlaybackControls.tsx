@@ -21,7 +21,7 @@ const PlaybackControls: FC<PlaybackControlsProps> = (
         setTab,
         setNoteSequence,
         setCurrentlyPlayingNotes,
-        exportTab,  // Add this
+        exportTab,
     }) => {
     return (
         <div className="mt-6 flex space-x-4">
