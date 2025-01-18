@@ -1,7 +1,7 @@
 "use client";
 
 import {DragEvent, FC, useEffect, useRef, useState} from 'react';
-import {Chorus, Compressor, Filter, now, PolySynth, Reverb, Sampler, start, Synth} from "tone";
+import {Chorus, Compressor, Filter, PolySynth, Reverb, Sampler, Synth} from "tone";
 import GuitarTabContainer from "./GuitarTabContainer";
 import CapoControl from "./CapoControl";
 import TabDisplaySection from "./TabDisplaySection";
@@ -10,10 +10,7 @@ import FretSelector from "./FretSelector";
 import PlaybackControls from "./PlaybackControls";
 import AddSectionButton from "./AddTabSection";
 import {v4} from 'uuid';
-
-interface StringNotes {
-    [key: number]: string;
-}
+import {playAllMusicalNotes, playMusicalNote} from "./utils";
 
 export interface Tab {
     _id: string;
@@ -41,17 +38,14 @@ export interface Note {
 
 const GuitarTabEditor: FC = () => {
     const [currentlyPlayingNotes, setCurrentlyPlayingNotes] = useState<Note[]>([]);
-    const [tempo, setTempo] = useState<number>(120); // BPM (beats per minute)
-    const [capo, setCapo] = useState<number>(0);
     const [draggedNote, setDraggedNote] = useState<string | null>(null);
     const [sampler, setSampler] = useState<any>(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [noteSequence, setNoteSequence] = useState<Note[]>([]);
     const playbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const tabId = v4();
-    const [tabData, setTabData] = useState<Tab>({
+    const [tab, setTab] = useState<Tab>({
         _id: tabId,
         groups: [{
             _id: v4(),
@@ -69,16 +63,6 @@ const GuitarTabEditor: FC = () => {
         tempo: 120,
         capo: 0
     });
-
-    const stringNotes: StringNotes = {
-        0: 'E4', // High E
-        1: 'B3',
-        2: 'G3',
-        3: 'D3',
-        4: 'A2',
-        5: 'E2', // Low E
-    };
-
 
     useEffect(() => {
         // Using the provided acoustic guitar samples
@@ -194,142 +178,16 @@ const GuitarTabEditor: FC = () => {
         };
     }, []);
 
-    const getNoteFromFret = (string: number, fret: string) => {
-        const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-        const openNote = stringNotes[string];
-        const openNoteBase = openNote.slice(0, -1);
-        const openNoteOctave = parseInt(openNote.slice(-1));
-
-        const baseNoteIndex = notes.indexOf(openNoteBase);
-        const totalSemitonesUp = parseInt(fret) + capo;
-
-        const newNoteIndex = (baseNoteIndex + totalSemitonesUp) % 12;
-        const octaveChange = Math.floor((baseNoteIndex + totalSemitonesUp) / 12);
-
-        return `${notes[newNoteIndex]}${openNoteOctave + octaveChange}`;
-    };
-
-    const playNote = (string: number, fret: string, type?: 'h' | 'p') => {
-        if (sampler && isLoaded) {
-            const note = getNoteFromFret(string, fret);
-            let velocity = 0.2;
-            let duration = "4n";
-
-            // Adjust velocity and duration based on type
-            if (type === 'h') {
-                velocity = 0.4; // Harder attack for hammer-on
-                duration = "8n"; // Shorter duration
-            } else if (type === 'p') {
-                velocity = 0.15; // Softer attack for pull-off
-                duration = "8n";
-            }
-
-            velocity += Math.random() * 0.1; // Add slight variation
-            const timing = now();
-            sampler.triggerAttackRelease(note, duration, timing, velocity);
-        }
-    };
+    const playNote = (stringIndex: number, fret: string, type?: 'h' | 'p' | 'space') => {
+        playMusicalNote(sampler, isLoaded, tab.capo, stringIndex, fret, type);
+    }
 
     const playAllNotes = async () => {
-        if (!sampler || !isLoaded || isPlaying) return;
+        await playAllMusicalNotes(sampler, tab, isLoaded, isPlaying, setCurrentlyPlayingNotes, playbackTimeoutRef);
+    }
 
-        await start();
-        setIsPlaying(true);
-
-        // Sort notes by absolute position
-        const sortedNotes = [...noteSequence].sort((a, b) =>
-            a.absolutePosition - b.absolutePosition
-        );
-
-        // Group notes by absolute position
-        const timeline: { position: number; notes: Note[] }[] = [];
-        sortedNotes.forEach(note => {
-            const pos = note.absolutePosition;
-            if (!timeline[pos]) {
-                timeline[pos] = {position: pos, notes: []};
-            }
-            timeline[pos].notes.push(note);
-        });
-
-        const maxPosition = Math.max(...noteSequence.map(note => note.position));
-
-        // Fill timeline with empty arrays for each position
-        for (let i = 0; i <= maxPosition; i++) {
-            timeline[i] = {position: i, notes: []};
-        }
-
-        // Fill in the notes at their correct positions
-        noteSequence.forEach(note => {
-            timeline[note.position].notes.push(note);
-        });
-
-        const playChord = (notes: Note[]) => {
-            // Sort notes by string number (6 to 1) for natural strumming
-            const sortedNotes = [...notes].sort((a, b) => b.stringIndex - a.stringIndex);
-
-            sortedNotes.forEach((note, index) => {
-                const actualNote = getNoteFromFret(note.stringIndex, note.fret);
-                let baseVelocity = 0.2;
-                let duration = "4n";
-
-                // Adjust velocity and duration based on type
-                if (note.type === 'h') {
-                    baseVelocity = 0.4;
-                    duration = "8n";
-                } else if (note.type === 'p') {
-                    baseVelocity = 0.15;
-                    duration = "8n";
-                }
-
-                const velocityVariation = 0.1;
-                const velocity = baseVelocity + Math.random() * velocityVariation;
-                const strumDelay = index * 15;
-                const timing = now() + (strumDelay / 1000);
-
-                sampler.triggerAttackRelease(
-                    actualNote,
-                    duration,
-                    timing,
-                    velocity
-                );
-            });
-        };
-
-        const playNextPosition = (index: number) => {
-            if (index >= timeline.length) {
-                stopPlayback();
-                return;
-            }
-
-            const currentPosition = timeline[index];
-
-            // Only play and show highlighting if there are notes at this position
-            if (currentPosition.notes.length > 0) {
-                setCurrentlyPlayingNotes(
-                    currentPosition.notes.map(note => ({
-                        _id: note._id,
-                        absolutePosition: note.absolutePosition,
-                        stringIndex: note.stringIndex,
-                        fret: note.fret,
-                        position: note.position,
-                        type: note.type
-                    }))
-                );
-                playChord(currentPosition.notes);
-            } else {
-                // Clear highlighting for spaces
-                setCurrentlyPlayingNotes([]);
-            }
-
-            const delayMs = (60 / tempo) * 1000;
-            playbackTimeoutRef.current = setTimeout(() => playNextPosition(index + 1), delayMs);
-        };
-
-        playNextPosition(0);
-    };
-
-    const updateNote = (stringIndex: number, position: number, groupIndex: number, value: string, type?: 'h' | 'p') => {
-        setTabData(prev => {
+    const updateNote = (stringIndex: number, position: number, groupIndex: number, value: string, type?: 'h' | 'p' | 'space') => {
+        setTab(prev => {
             const newGroups = [...prev.groups];
             const targetGroup = {...newGroups[groupIndex]};
 
@@ -378,7 +236,7 @@ const GuitarTabEditor: FC = () => {
     };
 
     const addNewSection = () => {
-        setTabData(prev => ({
+        setTab(prev => ({
             ...prev,
             groups: [
                 ...prev.groups,
@@ -386,7 +244,14 @@ const GuitarTabEditor: FC = () => {
                     _id: crypto.randomUUID(),
                     tabId: prev._id,
                     groupIndex: prev.groups.length,
-                    notes: [[], [], [], [], [], []] // Initialize empty arrays for each string
+                    notes: [
+                        [],
+                        [],
+                        [],
+                        [],
+                        [],
+                        []
+                    ] // Initialize empty arrays for each string
                 }
             ]
         }));
@@ -395,15 +260,15 @@ const GuitarTabEditor: FC = () => {
     const exportTab = () => {
         let tabText = "Guitar Tab\n\n";
 
-        if (capo > 0) {
-            tabText += `Capo: ${capo}\n\n`;
+        if (tab.capo > 0) {
+            tabText += `Capo: ${tab.capo}\n\n`;
         }
 
         const stringLabels = ['e|', 'B|', 'G|', 'D|', 'A|', 'E|'];
         const stringLines = Array(6).fill('').map((_, i) => stringLabels[i]);
 
         // Process each group
-        tabData.groups.forEach((group, groupIndex) => {
+        tab.groups.forEach((group, groupIndex) => {
             // Add group separator if not first group
             if (groupIndex > 0) {
                 stringLines.forEach((_, i) => {
@@ -445,7 +310,7 @@ const GuitarTabEditor: FC = () => {
         tabText += stringLines.join('\n') + '\n';
 
         // Add legend if techniques are used
-        if (tabData.groups.some(group =>
+        if (tab.groups.some(group =>
             group.notes.some(stringNotes =>
                 stringNotes.some(note => note.type === 'h' || note.type === 'p')
             )
@@ -515,7 +380,7 @@ const GuitarTabEditor: FC = () => {
     const handleDrop = (e: DragEvent, stringIndex: number, position: number, groupIndex: number) => {
         e.preventDefault();
 
-        const targetGroup = tabData.groups[groupIndex];
+        const targetGroup = tab.groups[groupIndex];
         if (!targetGroup) return;
 
         // Check if there's already a note at this position
@@ -536,10 +401,10 @@ const GuitarTabEditor: FC = () => {
 
     return (
         <GuitarTabContainer isLoaded={isLoaded}>
-            <CapoControl capo={capo} setCapo={setCapo}/>
-            <TempoControl tempo={tempo} setTempo={setTempo}/>
+            <CapoControl capo={tab.capo} setCapo={(capo) => setTab({...tab, capo})}/>
+            <TempoControl tempo={tab.tempo} setTempo={(tempo) => setTab({...tab, tempo})}/>
             <TabDisplaySection
-                tab={tabData}
+                tab={tab}
                 playNote={playNote}
                 handleDragOver={handleDragOver}
                 handleDrop={handleDrop}
@@ -548,14 +413,14 @@ const GuitarTabEditor: FC = () => {
             />
             <FretSelector handleDragStart={handleDragStart}/>
             <AddSectionButton onAdd={addNewSection}/>
-            <PlaybackControls playAllNotes={playAllNotes}
-                              isPlaying={isPlaying}
-                              isEmptyNoteSequence={noteSequence.length === 0}
-                              stopPlayback={stopPlayback}
-                              setTab={setTabData}
-                              setNoteSequence={setNoteSequence}
-                              setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}
-                              exportTab={exportTab}
+            <PlaybackControls
+                tab={tab}
+                playAllNotes={playAllNotes}
+                isPlaying={isPlaying}
+                stopPlayback={stopPlayback}
+                setTab={setTab}
+                setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}
+                exportTab={exportTab}
             />
         </GuitarTabContainer>
     );

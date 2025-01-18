@@ -16,6 +16,15 @@ interface EditingPosition {
     groupIndex: number;
 }
 
+const stringDisplayMappings: Record<number, string> = {
+    0: 'E',
+    1: 'B',
+    2: 'G',
+    3: 'D',
+    4: 'A',
+    5: 'e',
+}
+
 const TabDisplaySection: FC<TabDisplaySectionProps> = (
     {
         tab,
@@ -59,21 +68,21 @@ const TabDisplaySection: FC<TabDisplaySectionProps> = (
     };
 
     return (
-        <div className="w-full bg-blue-50 p-6 rounded-lg mb-6">
+        <div className="w-full p-6 mb-6">
             {tab.groups.map((group) => (
-                <div key={group._id} className="mb-8">
+                <div key={group._id} className="bg-blue-50 p-5 mb-8 rounded-lg">
                     <h3 className="text-gray-700 mb-2">Section {group.groupIndex + 1}</h3>
                     <div className="grid grid-rows-6 gap-3">
                         {[...Array(6)].map((_, stringIndex) => (
                             <div key={`${group._id}-${stringIndex}`} className="flex items-center space-x-4"
                                  onDragOver={handleDragOver}>
                                 <span className="w-20 font-mono text-gray-700 text-center">
-                                    {`${6 - stringIndex}`}
+                                    {`${stringDisplayMappings[5 - stringIndex]}`}
                                 </span>
                                 <div className="flex-1 h-16 bg-white border border-gray-200 rounded-lg flex">
                                     {[...Array(16)].map((_, position) => {
                                         const stringNotes = group.notes[stringIndex] || [];
-                                        const note = stringNotes.find(n => n.position === position);
+                                        const note = stringNotes.find(note => note.position === position);
 
                                         return (
                                             <div
@@ -86,7 +95,8 @@ const TabDisplaySection: FC<TabDisplaySectionProps> = (
                                                 {editingPosition?.stringIndex === stringIndex &&
                                                 editingPosition?.position === position &&
                                                 editingPosition?.groupIndex === group.groupIndex ? (
-                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                    <div
+                                                        className="absolute inset-0 flex items-center justify-center">
                                                         <input
                                                             type="text"
                                                             value=""
@@ -104,7 +114,8 @@ const TabDisplaySection: FC<TabDisplaySectionProps> = (
                                                         />
                                                     </div>
                                                 ) : note ? (
-                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                    <div
+                                                        className="absolute inset-0 flex items-center justify-center">
                                                         <div className="relative">
                                                             <input
                                                                 type="text"
