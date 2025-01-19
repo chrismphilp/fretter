@@ -1,38 +1,32 @@
-import {Note, Tab} from "../GuitarTabEditor";
 import {FC} from "react";
+import AddTabGroupSectionButton from "./AddTabGroupSection";
 import ClearTabButton from "./ClearTabButton";
 import ExportTabButton from "./ExportTabButton";
-import StopPlaybackButton from "./StopPlaybackButton";
-import PlaybackButton from "./PlaybackButton";
+import {Note, Tab} from "../../GuitarTabEditor";
 
-interface PlaybackControlsProps {
+interface ManageTabContainerProps {
     tab: Tab;
-    playAllNotes: () => void;
-    isPlaying: boolean;
-    stopPlayback: () => void;
     setTab: (tab: Tab) => void;
+    addTabGroupSection: () => void;
     setCurrentlyPlayingNotes: (notes: Note[]) => void;
     exportTab: () => void;
 }
 
-const PlaybackControls: FC<PlaybackControlsProps> = (
+const ManageTabContainer: FC<ManageTabContainerProps> = (
     {
         tab,
-        playAllNotes,
-        isPlaying,
-        stopPlayback,
         setTab,
+        addTabGroupSection,
         setCurrentlyPlayingNotes,
         exportTab,
     }) => {
     return (
         <div className="mt-6 flex space-x-4">
-            <PlaybackButton playAllNotes={playAllNotes} isPlaying={isPlaying}/>
-            <StopPlaybackButton stopPlayback={stopPlayback} isPlaying={isPlaying}/>
+            <AddTabGroupSectionButton addTabGroupSection={addTabGroupSection}/>
             <ClearTabButton tab={tab} setTab={setTab} setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}/>
             <ExportTabButton exportTab={exportTab}/>
         </div>
     );
-};
+}
 
-export default PlaybackControls;
+export default ManageTabContainer;

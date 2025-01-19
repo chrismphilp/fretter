@@ -7,7 +7,7 @@ interface TempoControlProps {
 
 const TempoControl: FC<TempoControlProps> = ({tempo, setTempo}) => {
     return (
-        <div className="flex items-center space-x-4 mb-6">
+        <div className="flex-1 flex items-center space-x-4 mb-6">
             <label className="text-gray-700">Tempo (BPM):</label>
             <input
                 type="range"

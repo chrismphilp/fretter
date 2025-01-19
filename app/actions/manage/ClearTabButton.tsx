@@ -1,6 +1,6 @@
-import {Note, Tab} from "../GuitarTabEditor";
+import {Note, Tab} from "../../GuitarTabEditor";
 import {FC} from "react";
-import {emptyTab} from "../utils";
+import {emptyTab} from "../../utils";
 
 interface ClearTabButtonProps {
     tab: Tab;
@@ -15,7 +15,7 @@ const ClearTabButton: FC<ClearTabButtonProps> = ({tab, setTab, setCurrentlyPlayi
                 setTab(emptyTab(tab._id));
                 setCurrentlyPlayingNotes([]);
             }}
-            className="px-4 py-2 rounded-md text-white bg-red-500 hover:bg-gray-700 transition-colors"
+            className="mt-4 px-4 py-2 rounded-md text-white bg-red-500 hover:bg-gray-700 transition-colors"
         >
             Clear Tab
         </button>

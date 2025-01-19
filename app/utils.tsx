@@ -51,7 +51,14 @@ const getNoteFromFret = (capo: number, string: number, fret: string) => {
     return `${notes[newNoteIndex]}${openNoteOctave + octaveChange}`;
 };
 
-const playMusicalNote = (sampler: Sampler, isLoaded: boolean, capo: number, string: number, fret: string, type?: 'h' | 'p' | 'space') => {
+const playMusicalNote = (
+    sampler: Sampler,
+    isLoaded: boolean,
+    capo: number,
+    string: number,
+    fret: string,
+    type?: 'h' | 'p' | 'space'
+) => {
     if (sampler && isLoaded) {
         const note = getNoteFromFret(capo, string, fret);
         let velocity = 0.2;

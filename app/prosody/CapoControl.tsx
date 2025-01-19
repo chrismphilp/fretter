@@ -7,7 +7,7 @@ interface CapoControlProps {
 
 const CapoControl: FC<CapoControlProps> = ({capo, setCapo}) => {
     return (
-        <div className="flex items-center space-x-4 mb-6">
+        <div className="flex-1 flex items-center space-x-4 mb-6">
             <label className="w-20 text-gray-700">Capo:</label>
             <input
                 type="number"

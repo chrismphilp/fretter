@@ -3,14 +3,13 @@
 import {DragEvent, FC, useEffect, useRef, useState} from 'react';
 import {Chorus, Compressor, Filter, PolySynth, Reverb, Sampler, Synth} from "tone";
 import GuitarTabContainer from "./GuitarTabContainer";
-import CapoControl from "./CapoControl";
 import TabDisplaySection from "./TabDisplaySection";
-import TempoControl from "./TempoControl";
-import FretSelector from "./FretSelector";
-import PlaybackControls from "./actions/PlaybackControls";
-import AddSectionButton from "./AddTabSection";
+import FretSelector from "./prosody/FretSelector";
+import PlaybackControlContainer from "./actions/playback/PlaybackControlContainer";
 import {v4} from 'uuid';
 import {emptyTab, playAllMusicalNotes, playMusicalNote} from "./utils";
+import ProsodyContainer from "./prosody/ProsodyContainer";
+import ManageTabContainer from "./actions/manage/ManageTabContainer";
 
 export interface Tab {
     _id: string;
@@ -218,7 +217,7 @@ const GuitarTabEditor: FC = () => {
         });
     };
 
-    const addNewSection = () => {
+    const addTabGroupSection = () => {
         setTab(prev => ({
             ...prev,
             groups: [
@@ -384,8 +383,13 @@ const GuitarTabEditor: FC = () => {
 
     return (
         <GuitarTabContainer isLoaded={isLoaded}>
-            <CapoControl capo={tab.capo} setCapo={(capo) => setTab({...tab, capo})}/>
-            <TempoControl tempo={tab.tempo} setTempo={(tempo) => setTab({...tab, tempo})}/>
+            <ProsodyContainer
+                tempo={tab.tempo}
+                setTempo={(tempo) => setTab({...tab, tempo})}
+                capo={tab.capo}
+                setCapo={(capo) => setTab({...tab, capo})}
+            />
+
             <TabDisplaySection
                 tab={tab}
                 playNote={playNote}
@@ -394,14 +398,19 @@ const GuitarTabEditor: FC = () => {
                 currentlyPlayingNotes={currentlyPlayingNotes}
                 updateNote={updateNote}
             />
+
             <FretSelector handleDragStart={handleDragStart}/>
-            <AddSectionButton onAdd={addNewSection}/>
-            <PlaybackControls
-                tab={tab}
+
+            <PlaybackControlContainer
                 playAllNotes={playAllNotes}
                 isPlaying={isPlaying}
                 stopPlayback={stopPlayback}
+            />
+
+            <ManageTabContainer
+                tab={tab}
                 setTab={setTab}
+                addTabGroupSection={addTabGroupSection}
                 setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}
                 exportTab={exportTab}
             />

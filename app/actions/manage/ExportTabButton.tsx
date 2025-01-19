@@ -8,7 +8,7 @@ const ExportTabButton: FC<ExportTabButtonProps> = ({exportTab}) => {
     return (
         <button
             onClick={exportTab}
-            className="px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+            className="mt-4 px-4 py-2 rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
         >
             Export Tab
         </button>
