@@ -1,0 +1,36 @@
+name: Get secrets from Secret Manager
+
+on:
+  push:
+    branches: ["master"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: 'actions/checkout@v4'
+
+      - name: Put cert from Github Secret into a file
+        run: |
+          echo "${{ secrets.FRETTER_X509_CERTIFICATE }}" > cert.pem
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.SA_EMAIL }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and push Docker image
+        run: |
+          gcloud builds submit --tag gcr.io/${{ secrets.PROJECT_ID }}/fretter
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy fretter \
+            --image gcr.io/${{ secrets.PROJECT_ID }}/fretter \
+            --platform managed \
+            --region europe-west1

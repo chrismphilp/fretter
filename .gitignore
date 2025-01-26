@@ -4,7 +4,6 @@ logs
 **/*.backup.*
 **/*.back.*
 
-node_modules
 bower_components
 
 *.sublime*
@@ -15,4 +14,6 @@ sketch
 
 .idea
 
-.next
+# Frontend
+frontend/node_modules
+frontend/.next
