@@ -3,7 +3,10 @@ package controller
 import (
 	"context"
 	"errors"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"net/http"
+	"os"
 	"time"
 
 	"backend/models"
@@ -12,6 +15,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
+
+var logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339})
 
 type TabController struct {
 	TabsCollection *mongo.Collection
@@ -44,6 +49,7 @@ func (c *TabController) GetAllTabs(ctx *gin.Context) {
 	cursor, err := c.TabsCollection.Find(dbCtx, bson.M{})
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		logger.Error().Err(err).Msg("failed to fetch all tabs")
 		return
 	}
 	defer cursor.Close(dbCtx)
@@ -51,6 +57,7 @@ func (c *TabController) GetAllTabs(ctx *gin.Context) {
 	var tabs []models.Tab
 	if err = cursor.All(dbCtx, &tabs); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		logger.Error().Err(err).Msg("failed to decode tabs")
 		return
 	}
 
@@ -61,13 +68,13 @@ func (c *TabController) CreateTab(ctx *gin.Context) {
 	var tab models.Tab
 	if err := ctx.ShouldBindJSON(&tab); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		logger.Warn().Err(err).Msg("failed to bind request body")
 		return
 	}
 
 	dbCtx, cancel := context.WithTimeout(ctx.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	// Generate ObjectIDs for tab and all nested elements if they don't exist
 	if tab.ID.IsZero() {
 		tab.ID = primitive.NewObjectID()
 	}
@@ -89,6 +96,7 @@ func (c *TabController) CreateTab(ctx *gin.Context) {
 	result, err := c.TabsCollection.InsertOne(dbCtx, tab)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		logger.Error().Err(err).Msg("failed to insert tab")
 		return
 	}
 
@@ -102,12 +110,14 @@ func (c *TabController) GetTabById(ctx *gin.Context) {
 	id := ctx.Param("id")
 	if id == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tab ID"})
+		logger.Warn().Msg("invalid tab ID")
 		return
 	}
 
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tab ID format"})
+		logger.Warn().Msg("invalid tab ID format")
 		return
 	}
 
@@ -119,8 +129,10 @@ func (c *TabController) GetTabById(ctx *gin.Context) {
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Tab not found"})
+			logger.Warn().Err(err).Msg("tab not found")
 		} else {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			logger.Error().Err(err).Msg("failed to fetch tab")
 		}
 		return
 	}
@@ -131,36 +143,39 @@ func (c *TabController) UpdateTab(ctx *gin.Context) {
 	id := ctx.Param("id")
 	if id == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tab ID"})
+		logger.Warn().Msg("invalid tab ID")
 		return
 	}
 
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tab ID format"})
+		logger.Warn().Msg("invalid tab ID format")
 		return
 	}
 
 	var tab models.Tab
 	if err := ctx.ShouldBindJSON(&tab); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		logger.Error().Err(err).Msg("failed to bind request body")
 		return
 	}
 
-	// Set the ID from the URL
 	tab.ID = objectID
 
 	dbCtx, cancel := context.WithTimeout(ctx.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	// Update the document
 	result, err := c.TabsCollection.ReplaceOne(dbCtx, bson.M{"_id": objectID}, tab)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		logger.Error().Err(err).Msg("failed to update tab")
 		return
 	}
 
 	if result.MatchedCount == 0 {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "Tab not found"})
+		logger.Warn().Msg("tab not found")
 		return
 	}
 
@@ -171,12 +186,14 @@ func (c *TabController) DeleteTab(ctx *gin.Context) {
 	id := ctx.Param("id")
 	if id == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tab ID"})
+		logger.Warn().Msg("invalid tab ID")
 		return
 	}
 
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tab ID format"})
+		logger.Warn().Msg("invalid tab ID format")
 		return
 	}
 
@@ -186,11 +203,13 @@ func (c *TabController) DeleteTab(ctx *gin.Context) {
 	result, err := c.TabsCollection.DeleteOne(dbCtx, bson.M{"_id": objectID})
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		logger.Error().Err(err).Msg("failed to delete tab")
 		return
 	}
 
 	if result.DeletedCount == 0 {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "Tab not found"})
+		logger.Warn().Msg("tab not found")
 		return
 	}
 

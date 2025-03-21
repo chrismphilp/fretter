@@ -16,14 +16,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var mongoClient *mongo.Client
-var tabController *controller.TabController
-
 func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339})
 
-	err := initMongoDB()
+	database, err := initMongoDB()
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to init mongodb")
 		return
@@ -32,6 +29,8 @@ func main() {
 	router := gin.Default()
 	router.Use(corsMiddleware())
 	router.GET("/", indexHandler)
+
+	tabController := controller.NewTabController(database)
 	tabController.SetupRoutes(router)
 
 	port := os.Getenv("PORT")
@@ -60,13 +59,13 @@ func corsMiddleware() gin.HandlerFunc {
 	}
 }
 
-func initMongoDB() error {
+func initMongoDB() (*mongo.Database, error) {
 	privateCertPath := os.Getenv("X509_PRIVATE_CERT_PATH")
 	if privateCertPath == "" {
 		workDir, err := os.Getwd()
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to get working directory")
-			return err
+			return nil, err
 		}
 		privateCertPath = fmt.Sprintf("%s/X509-cert-private.pem", workDir)
 		log.Info().Str("privateCertPath", privateCertPath).Msg("Using absolute certificate path")
@@ -74,7 +73,7 @@ func initMongoDB() error {
 
 	if _, err := os.Stat(privateCertPath); os.IsNotExist(err) {
 		log.Error().Str("privateCertPath", privateCertPath).Err(err).Msg("X509 private certificate file not found")
-		return err
+		return nil, err
 	}
 
 	publicCertPath := os.Getenv("X509_PUBLIC_CERT_PATH")
@@ -82,7 +81,7 @@ func initMongoDB() error {
 		workDir, err := os.Getwd()
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to get working directory")
-			return err
+			return nil, err
 		}
 		publicCertPath = fmt.Sprintf("%s/X509-cert-public.pem", workDir)
 		log.Info().Str("publicCertPath", publicCertPath).Msg("Using absolute certificate path")
@@ -90,13 +89,13 @@ func initMongoDB() error {
 
 	if _, err := os.Stat(publicCertPath); os.IsNotExist(err) {
 		log.Error().Str("publicCertPath", publicCertPath).Err(err).Msg("X509 public certificate file not found")
-		return err
+		return nil, err
 	}
 
 	cert, err := tls.LoadX509KeyPair(publicCertPath, privateCertPath)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to load X509 key pair")
-		return err
+		return nil, err
 	}
 
 	tlsConfig := &tls.Config{
@@ -121,10 +120,11 @@ func initMongoDB() error {
 	log.Debug().Msg("Attempting to connect to MongoDB...")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	mongoClient, err = mongo.Connect(ctx, clientOptions)
+
+	mongoClient, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to connect to MongoDB")
-		return err
+		return nil, err
 	}
 
 	pingCtx, pingCancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -133,14 +133,13 @@ func initMongoDB() error {
 	log.Debug().Msg("Pinging MongoDB...")
 	if err = mongoClient.Ping(pingCtx, readpref.Primary()); err != nil {
 		log.Error().Err(err).Msg("MongoDB ping failed but connection may still be usable")
-		return err
+		return nil, err
 	}
 	log.Info().Msg("Successfully pinged MongoDB")
 
 	database := mongoClient.Database("fretter")
-	tabController = controller.NewTabController(database)
 
-	return nil
+	return database, nil
 }
 
 func indexHandler(c *gin.Context) {
