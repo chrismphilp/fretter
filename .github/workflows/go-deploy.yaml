@@ -11,9 +11,10 @@ jobs:
       - name: Checkout
         uses: 'actions/checkout@v4'
 
-      - name: Put cert from Github Secret into a file
+      - name: Put certs from Github Secret into a file
         run: |
-          echo "${{ secrets.FRETTER_X509_CERTIFICATE }}" > cert.pem
+          echo "${{ secrets.FRETTER_X509_PUBLIC_CERTIFICATE }}" > X509-cert-public.pem
+          echo "${{ secrets.FRETTER_X509_PRIVATE_CERTIFICATE }}" > X509-cert-private.pem
 
       - id: auth
         uses: google-github-actions/auth@v2
