@@ -25,19 +25,18 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.SA_EMAIL }}
-          export_credentials: true
+          token_format: 'access_token'
+          create_credentials_file: true
         
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
           install_components: 'gcloud'
           project_id: ${{ secrets.PROJECT_ID }}
-          export_default_credentials: true
 
       - name: Build and Push Container
         run: |
-          cd $GITHUB_WORKSPACE  # Ensure we're in the root directory
-          gcloud builds submit --tag gcr.io/${{ secrets.PROJECT_ID }}/fretter --project=${{ secrets.PROJECT_ID }}
+          gcloud builds submit --tag gcr.io/${{ secrets.PROJECT_ID }}/fretter
 
       - name: Deploy to Cloud Run
         run: |
