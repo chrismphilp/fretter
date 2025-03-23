@@ -25,6 +25,13 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.SA_EMAIL }}
+        
+      - name: Remove credential override env vars
+        run: |
+          echo "Unsetting key-based credential environment variables..."
+          unset CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE
+          unset GOOGLE_APPLICATION_CREDENTIALS
+          unset GOOGLE_GHA_CREDS_PATH
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
