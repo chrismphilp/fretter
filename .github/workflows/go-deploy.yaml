@@ -18,9 +18,6 @@ jobs:
 
       - id: auth
         uses: google-github-actions/auth@v2
-        permissions:
-          contents: 'read'
-          id-token: 'write'
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.SA_EMAIL }}
