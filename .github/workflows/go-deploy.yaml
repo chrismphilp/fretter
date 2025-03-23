@@ -3,6 +3,11 @@ name: Fretter Go Deploy
 on:
   push:
     branches: ["master"]
+    paths:
+      - 'backend/**'
+      - 'Dockerfile'
+      - 'cloudbuild.yaml'
+      - '.github/workflows/go-deploy.yaml'
 
 permissions:
   id-token: write
