@@ -31,7 +31,7 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          gcloud builds submit --tag gcr.io/${{ secrets.PROJECT_ID }}/fretter
+          gcloud builds submit --tag gcr.io/${{ secrets.PROJECT_ID }}/fretter --project=${{ secrets.PROJECT_ID }}
 
       - name: Deploy to Cloud Run
         run: |
