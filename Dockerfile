@@ -1,8 +1,15 @@
-FROM golang:1.23 AS build
+FROM golang:1.22 AS build
 
 WORKDIR /app
 COPY backend/ .
 
+# Install certificates and set GOPROXY environment
+RUN apt-get update && apt-get install -y ca-certificates
+ENV GOPROXY=direct
+ENV GO111MODULE=on
+ENV GOSUMDB=off
+
+# Download dependencies
 RUN go mod download
 RUN go build -o main .
 
