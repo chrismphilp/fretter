@@ -33,7 +33,7 @@ jobs:
 
       - name: Build and Push Container
         run: |
-          gcloud builds submit --tag gcr.io/${{ secrets.PROJECT_ID }}/fretter --service-account=github-actions@fretter.iam.gserviceaccount.com
+          gcloud builds submit --config cloudbuild.yaml
 
       - name: Deploy to Cloud Run
         run: |
