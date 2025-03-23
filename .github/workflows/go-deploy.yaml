@@ -28,6 +28,10 @@ jobs:
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: 'gcloud'
+          project_id: ${{ secrets.PROJECT_ID }}
+          export_default_credentials: false
 
       - name: Build and push Docker image
         run: |
