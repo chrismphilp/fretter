@@ -39,3 +39,46 @@ jobs:
           push: true
           tags: gcr.io/${{ secrets.PROJECT_ID }}/backend:latest
           provenance: false
+          
+      - name: Create App Engine config
+        run: |
+          # Create app.yaml for App Engine Flexible environment
+          cat > backend/app.yaml << EOL
+          runtime: custom
+          env: flex
+          service: backend
+          
+          env_variables:
+            X509_PUBLIC_CERT_SECRET: projects/${{ secrets.PROJECT_ID }}/secrets/x509-cert-public/versions/latest
+            X509_PRIVATE_CERT_SECRET: projects/${{ secrets.PROJECT_ID }}/secrets/x509-cert-private/versions/latest
+            
+          manual_scaling:
+            instances: 1
+          resources:
+            cpu: 1
+            memory_gb: 0.5
+            disk_size_gb: 10
+          EOL
+          
+      - name: Ensure Secret Manager access
+        run: |
+          gcloud secrets add-iam-policy-binding x509-cert-public \
+            --member=serviceAccount:${{ secrets.PROJECT_ID }}@appspot.gserviceaccount.com \
+            --role=roles/secretmanager.secretAccessor \
+            --project=${{ secrets.PROJECT_ID }} \
+            --quiet || true
+            
+          gcloud secrets add-iam-policy-binding x509-cert-private \
+            --member=serviceAccount:${{ secrets.PROJECT_ID }}@appspot.gserviceaccount.com \
+            --role=roles/secretmanager.secretAccessor \
+            --project=${{ secrets.PROJECT_ID }} \
+            --quiet || true
+            
+      # Official GitHub Action for App Engine deployment
+      - name: Deploy to App Engine
+        uses: 'google-github-actions/deploy-appengine@v1'
+        with:
+          project_id: ${{ secrets.PROJECT_ID }}
+          working_directory: './backend'
+          image_url: gcr.io/${{ secrets.PROJECT_ID }}/backend:latest
+          deliverables: app.yaml
