@@ -40,8 +40,9 @@ jobs:
           project_id: ${{ secrets.PROJECT_ID }}
           export_default_credentials: false
 
-      - name: Build and push Docker image
+      - name: Build and Push Container
         run: |
+          cd $GITHUB_WORKSPACE  # Ensure we're in the root directory
           gcloud builds submit --tag gcr.io/${{ secrets.PROJECT_ID }}/fretter --project=${{ secrets.PROJECT_ID }}
 
       - name: Deploy to Cloud Run
