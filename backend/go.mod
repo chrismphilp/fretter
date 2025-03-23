@@ -1,8 +1,6 @@
 module backend
 
-go 1.23.0
-
-toolchain go1.23.4
+go 1.22.0
 
 require (
 	cloud.google.com/go/secretmanager v1.14.3
