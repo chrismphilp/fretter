@@ -3,14 +3,13 @@ FROM golang:1.23 AS build
 WORKDIR /app
 COPY backend/ .
 
-# Install certificates and set GOPROXY environment
+# Install certificates and set environment variables for robust downloads
 RUN apt-get update && apt-get install -y ca-certificates
-ENV GOPROXY=direct
+ENV GOPROXY=https://proxy.golang.org,direct
 ENV GO111MODULE=on
 ENV GOSUMDB=off
+ENV GOTOOLCHAIN=auto
 
-# Download dependencies
-RUN go mod download
 RUN go build -o main .
 
 # Run stage

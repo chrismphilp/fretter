@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"backend/controller"
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -26,7 +26,7 @@ func accessSecret(secretName string) (string, error) {
 		return "", fmt.Errorf("failed to create secretmanager client: %v", err)
 	}
 	defer client.Close()
-	
+
 	req := &secretmanagerpb.AccessSecretVersionRequest{
 		Name: secretName,
 	}
@@ -34,7 +34,7 @@ func accessSecret(secretName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to access secret version: %v", err)
 	}
-	
+
 	return string(result.Payload.Data), nil
 }
 
@@ -87,7 +87,7 @@ func initMongoDB() (*mongo.Database, error) {
 
 	privateCertPath := os.Getenv("X509_PRIVATE_CERT_PATH")
 	publicCertPath := os.Getenv("X509_PUBLIC_CERT_PATH")
-	
+
 	privateSecretName := os.Getenv("X509_PRIVATE_CERT_SECRET")
 	publicSecretName := os.Getenv("X509_PUBLIC_CERT_SECRET")
 
@@ -99,7 +99,7 @@ func initMongoDB() (*mongo.Database, error) {
 			log.Error().Err(err).Msg("Failed to access private cert secret")
 			return nil, err
 		}
-		
+
 		publicCertContent, err = accessSecret(publicSecretName)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to access public cert secret")
@@ -108,26 +108,28 @@ func initMongoDB() (*mongo.Database, error) {
 	} else if privateCertPath != "" && publicCertPath != "" {
 		// If using file paths
 		log.Info().Msg("Loading certificates from file paths")
-		
+
 		if _, err := os.Stat(privateCertPath); os.IsNotExist(err) {
 			log.Error().Str("privateCertPath", privateCertPath).Err(err).Msg("X509 private certificate file not found")
 			return nil, err
 		}
-		privateCertContent, err = os.ReadFile(privateCertPath)
+		privateBytes, err := os.ReadFile(privateCertPath)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to read private cert file")
 			return nil, err
 		}
+		privateCertContent = string(privateBytes)
 
 		if _, err := os.Stat(publicCertPath); os.IsNotExist(err) {
 			log.Error().Str("publicCertPath", publicCertPath).Err(err).Msg("X509 public certificate file not found")
 			return nil, err
 		}
-		publicCertContent, err = os.ReadFile(publicCertPath)
+		publicBytes, err := os.ReadFile(publicCertPath)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to read public cert file")
 			return nil, err
 		}
+		publicCertContent = string(publicBytes)
 	} else {
 		log.Error().Msg("No certificate source specified")
 		return nil, fmt.Errorf("no certificate source specified")
