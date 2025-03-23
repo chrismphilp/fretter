@@ -59,7 +59,31 @@ jobs:
             memory_gb: 0.5
             disk_size_gb: 10
           EOL
+            
+      # Enable required APIs
+      - name: Enable App Engine Admin API
+        run: |
+          gcloud services enable appengine.googleapis.com --project=${{ secrets.PROJECT_ID }}
+          gcloud services enable appengineflex.googleapis.com --project=${{ secrets.PROJECT_ID }}
           
+      # Grant necessary App Engine deployment permissions
+      - name: Grant App Engine Admin permissions
+        run: |
+          # Grant App Engine Admin role to the service account
+          gcloud projects add-iam-policy-binding ${{ secrets.PROJECT_ID }} \
+            --member=serviceAccount:${{ secrets.SA_EMAIL }} \
+            --role=roles/appengine.appAdmin
+            
+          # Grant Service Account User role to access the App Engine service account
+          gcloud projects add-iam-policy-binding ${{ secrets.PROJECT_ID }} \
+            --member=serviceAccount:${{ secrets.SA_EMAIL }} \
+            --role=roles/iam.serviceAccountUser
+            
+          # Grant Storage Admin role for deploying files
+          gcloud projects add-iam-policy-binding ${{ secrets.PROJECT_ID }} \
+            --member=serviceAccount:${{ secrets.SA_EMAIL }} \
+            --role=roles/storage.admin
+            
       - name: Ensure Secret Manager access
         run: |
           gcloud secrets add-iam-policy-binding x509-cert-public \
@@ -73,7 +97,7 @@ jobs:
             --role=roles/secretmanager.secretAccessor \
             --project=${{ secrets.PROJECT_ID }} \
             --quiet || true
-            
+          
       # Official GitHub Action for App Engine deployment
       - name: Deploy to App Engine
         uses: 'google-github-actions/deploy-appengine@v1'
