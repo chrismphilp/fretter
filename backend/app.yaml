@@ -1,1 +1,6 @@
-runtime: go123
+runtime: go122
+service: backend
+
+env_variables:
+  X509_PUBLIC_CERT_SECRET: projects/fretter/secrets/x509-cert-public/versions/latest
+  X509_PRIVATE_CERT_SECRET: projects/fretter/secrets/x509-cert-private/versions/latest

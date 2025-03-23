@@ -18,9 +18,12 @@ FROM gcr.io/distroless/base-debian12
 
 WORKDIR /app
 COPY --from=build /app/main /app/
-COPY backend/X509-cert-public.pem /app/
-COPY backend/X509-cert-private.pem /app/
+
+# Create directory for certificates (will be mounted at runtime)
+WORKDIR /app/certs
+WORKDIR /app
 
 EXPOSE 8080
 
+# Note: X509 cert files should be mounted as volumes at runtime
 CMD ["/app/main"]

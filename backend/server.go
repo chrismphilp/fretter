@@ -8,13 +8,35 @@ import (
 	"os"
 	"time"
 
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"backend/controller"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 )
+
+// accessSecret retrieves a secret from Secret Manager
+func accessSecret(secretName string) (string, error) {
+	ctx := context.Background()
+	client, err := secretmanager.NewClient(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to create secretmanager client: %v", err)
+	}
+	defer client.Close()
+	
+	req := &secretmanagerpb.AccessSecretVersionRequest{
+		Name: secretName,
+	}
+	result, err := client.AccessSecretVersion(ctx, req)
+	if err != nil {
+		return "", fmt.Errorf("failed to access secret version: %v", err)
+	}
+	
+	return string(result.Payload.Data), nil
+}
 
 func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
@@ -60,39 +82,59 @@ func corsMiddleware() gin.HandlerFunc {
 }
 
 func initMongoDB() (*mongo.Database, error) {
+	var privateCertContent, publicCertContent string
+	var err error
+
 	privateCertPath := os.Getenv("X509_PRIVATE_CERT_PATH")
-	if privateCertPath == "" {
-		workDir, err := os.Getwd()
-		if err != nil {
-			log.Error().Err(err).Msg("Failed to get working directory")
-			return nil, err
-		}
-		privateCertPath = fmt.Sprintf("%s/X509-cert-private.pem", workDir)
-		log.Info().Str("privateCertPath", privateCertPath).Msg("Using absolute certificate path")
-	}
-
-	if _, err := os.Stat(privateCertPath); os.IsNotExist(err) {
-		log.Error().Str("privateCertPath", privateCertPath).Err(err).Msg("X509 private certificate file not found")
-		return nil, err
-	}
-
 	publicCertPath := os.Getenv("X509_PUBLIC_CERT_PATH")
-	if publicCertPath == "" {
-		workDir, err := os.Getwd()
+	
+	privateSecretName := os.Getenv("X509_PRIVATE_CERT_SECRET")
+	publicSecretName := os.Getenv("X509_PUBLIC_CERT_SECRET")
+
+	// If using Secret Manager
+	if privateSecretName != "" && publicSecretName != "" {
+		log.Info().Msg("Loading certificates from Secret Manager")
+		privateCertContent, err = accessSecret(privateSecretName)
 		if err != nil {
-			log.Error().Err(err).Msg("Failed to get working directory")
+			log.Error().Err(err).Msg("Failed to access private cert secret")
 			return nil, err
 		}
-		publicCertPath = fmt.Sprintf("%s/X509-cert-public.pem", workDir)
-		log.Info().Str("publicCertPath", publicCertPath).Msg("Using absolute certificate path")
+		
+		publicCertContent, err = accessSecret(publicSecretName)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to access public cert secret")
+			return nil, err
+		}
+	} else if privateCertPath != "" && publicCertPath != "" {
+		// If using file paths
+		log.Info().Msg("Loading certificates from file paths")
+		
+		if _, err := os.Stat(privateCertPath); os.IsNotExist(err) {
+			log.Error().Str("privateCertPath", privateCertPath).Err(err).Msg("X509 private certificate file not found")
+			return nil, err
+		}
+		privateCertContent, err = os.ReadFile(privateCertPath)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to read private cert file")
+			return nil, err
+		}
+
+		if _, err := os.Stat(publicCertPath); os.IsNotExist(err) {
+			log.Error().Str("publicCertPath", publicCertPath).Err(err).Msg("X509 public certificate file not found")
+			return nil, err
+		}
+		publicCertContent, err = os.ReadFile(publicCertPath)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to read public cert file")
+			return nil, err
+		}
+	} else {
+		log.Error().Msg("No certificate source specified")
+		return nil, fmt.Errorf("no certificate source specified")
 	}
 
-	if _, err := os.Stat(publicCertPath); os.IsNotExist(err) {
-		log.Error().Str("publicCertPath", publicCertPath).Err(err).Msg("X509 public certificate file not found")
-		return nil, err
-	}
-
-	cert, err := tls.LoadX509KeyPair(publicCertPath, privateCertPath)
+	// Use the cert content directly
+	cert, err := tls.X509KeyPair([]byte(publicCertContent), []byte(privateCertContent))
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to load X509 key pair")
 		return nil, err
