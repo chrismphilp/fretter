@@ -91,8 +91,7 @@ func initMongoDB() (*mongo.Database, error) {
 	privateSecretName := os.Getenv("X509_PRIVATE_CERT_SECRET")
 	publicSecretName := os.Getenv("X509_PUBLIC_CERT_SECRET")
 
-	// If using Secret Manager
-	if privateSecretName != "" && publicSecretName != "" {
+	if privateSecretName != "" && publicSecretName != "" { // If using Secret Manager
 		log.Info().Msg("Loading certificates from Secret Manager")
 		privateCertContent, err = accessSecret(privateSecretName)
 		if err != nil {
@@ -105,8 +104,8 @@ func initMongoDB() (*mongo.Database, error) {
 			log.Error().Err(err).Msg("Failed to access public cert secret")
 			return nil, err
 		}
-	} else if privateCertPath != "" && publicCertPath != "" {
-		// If using file paths
+		log.Info().Msg("Successfully loaded certificates from Secret Manager")
+	} else if privateCertPath != "" && publicCertPath != "" { // If using file paths
 		log.Info().Msg("Loading certificates from file paths")
 
 		if _, err := os.Stat(privateCertPath); os.IsNotExist(err) {
@@ -130,6 +129,8 @@ func initMongoDB() (*mongo.Database, error) {
 			return nil, err
 		}
 		publicCertContent = string(publicBytes)
+
+		log.Info().Msg("Successfully loaded certificates from file paths")
 	} else {
 		log.Error().Msg("No certificate source specified")
 		return nil, fmt.Errorf("no certificate source specified")
