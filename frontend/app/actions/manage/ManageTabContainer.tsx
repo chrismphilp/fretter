@@ -21,7 +21,7 @@ const ManageTabContainer: FC<ManageTabContainerProps> = (
         exportTab,
     }) => {
     return (
-        <div className="mt-6 flex space-x-4">
+        <div className="mb-8 flex flex-wrap gap-3">
             <AddTabGroupSectionButton addTabGroupSection={addTabGroupSection}/>
             <ClearTabButton tab={tab} setTab={setTab} setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}/>
             <ExportTabButton exportTab={exportTab}/>

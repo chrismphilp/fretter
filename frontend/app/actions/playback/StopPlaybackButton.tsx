@@ -10,8 +10,8 @@ const StopPlaybackButton: FC<StopPlaybackButtonProps> = ({stopPlayback, isPlayin
         <button
             onClick={stopPlayback}
             disabled={!isPlaying}
-            className={`px-4 py-2 rounded-md text-white transition-colors" ${
-                !isPlaying ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-500 hover:bg-red-700'
+            className={`btn btn-compact ${
+                !isPlaying ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed' : 'bg-accent-600 text-white hover:bg-accent-700 focus:ring-accent-500'
             }`}
         >
             Stop

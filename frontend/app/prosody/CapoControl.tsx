@@ -7,8 +7,8 @@ interface CapoControlProps {
 
 const CapoControl: FC<CapoControlProps> = ({capo, setCapo}) => {
     return (
-        <div className="flex-1 flex items-center space-x-4 mb-6">
-            <label className="w-20 text-gray-700">Capo:</label>
+        <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-neutral-700">Capo:</label>
             <input
                 type="number"
                 min="0"
@@ -18,7 +18,7 @@ const CapoControl: FC<CapoControlProps> = ({capo, setCapo}) => {
                     const value = parseInt(e.target.value) || 0;
                     setCapo(value);
                 }}
-                className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-20 px-3 py-2 text-sm rounded-md border border-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
         </div>
     );

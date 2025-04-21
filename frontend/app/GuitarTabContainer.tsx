@@ -7,13 +7,12 @@ interface GuitarTabContainerProps {
 
 const GuitarTabContainer: FC<GuitarTabContainerProps> = ({isLoaded, children}) => {
     return (
-        <div className="w-full p-5">
-            <div className="mb-6">
-                <h2 className="text-3xl font-semibold text-gray-800 tracking-wide leading-tight border-b-2 border-gray-300 pb-2 mb-4">Acoustic Guitar Tab Editor</h2>
+        <div className="w-full max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+            <div className="mb-8">
+                <h2 className="text-2xl font-medium text-neutral-800 tracking-tight pb-2 border-b border-neutral-200">Fretter</h2>
                 {!isLoaded && (
-                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                        <h3 className="text-sm font-medium text-blue-800">Loading</h3>
-                        <p className="text-sm text-blue-700">Loading guitar samples...</p>
+                    <div className="mt-4 p-4 bg-primary-50 border border-primary-100 rounded-md">
+                        <p className="text-sm text-primary-700">Loading guitar samples...</p>
                     </div>
                 )}
             </div>

@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "../node_modules/.bin/next dev",
-    "build": "../node_modules/.bin/next build",
-    "start": "../node_modules/.bin/next start",
-    "lint": "../node_modules/.bin/next lint"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
-    "next": "^15.1.4",
+    "next": "15.2.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tone": "^15.0.4",

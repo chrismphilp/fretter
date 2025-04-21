@@ -18,7 +18,7 @@ const ProsodyContainer: FC<ProsodyContainerProps> = (
     }
 ) => {
     return (
-        <div className="flex flex-wrap">
+        <div className="card p-4 mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <CapoControl capo={capo} setCapo={setCapo}/>
             <TempoControl tempo={tempo} setTempo={setTempo}/>
         </div>

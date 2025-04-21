@@ -8,9 +8,9 @@ const AddTabGroupSectionButton: FC<AddTabGroupSectionButtonProps> = ({ addTabGro
     return (
         <button
             onClick={addTabGroupSection}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="btn btn-compact btn-primary"
         >
-            Add Section (+16 bars)
+            Add Section
         </button>
     );
 };

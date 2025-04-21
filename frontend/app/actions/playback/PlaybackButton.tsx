@@ -10,11 +10,11 @@ const PlaybackButton: FC<PlayButtonProps> = ({playAllNotes, isPlaying}) => {
         <button
             onClick={playAllNotes}
             disabled={isPlaying}
-            className={`px-4 py-2 rounded-md text-white transition-colors ${
-                isPlaying ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
+            className={`btn btn-compact ${
+                isPlaying ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed' : 'btn-primary'
             }`}
         >
-            {isPlaying ? 'Playing...' : 'Play All Notes'}
+            {isPlaying ? 'Playing...' : 'Play'}
         </button>
     )
 }

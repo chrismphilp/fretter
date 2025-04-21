@@ -10,6 +10,11 @@ import {v4} from 'uuid';
 import {emptyTab, playAllMusicalNotes, playMusicalNote} from "./utils";
 import ProsodyContainer from "./prosody/ProsodyContainer";
 import ManageTabContainer from "./actions/manage/ManageTabContainer";
+import PlaybackButton from "./actions/playback/PlaybackButton";
+import StopPlaybackButton from "./actions/playback/StopPlaybackButton";
+import AddTabGroupSection from "./actions/manage/AddTabGroupSection";
+import ClearTabButton from "./actions/manage/ClearTabButton";
+import ExportTabButton from "./actions/manage/ExportTabButton";
 
 export interface Tab {
     _id: string;
@@ -401,19 +406,34 @@ const GuitarTabEditor: FC = () => {
 
             <FretSelector handleDragStart={handleDragStart}/>
 
-            <PlaybackControlContainer
-                playAllNotes={playAllNotes}
-                isPlaying={isPlaying}
-                stopPlayback={stopPlayback}
-            />
+            <div className="card p-4 sticky bottom-4 z-10 border-t-2 border-primary-200">
+                <div className="flex flex-col sm:flex-row justify-between gap-4">
+                    <div className="flex gap-2 justify-center sm:justify-start">
+                        <PlaybackButton 
+                            playAllNotes={playAllNotes} 
+                            isPlaying={isPlaying}
+                        />
+                        <StopPlaybackButton 
+                            stopPlayback={stopPlayback} 
+                            isPlaying={isPlaying}
+                        />
+                    </div>
 
-            <ManageTabContainer
-                tab={tab}
-                setTab={setTab}
-                addTabGroupSection={addTabGroupSection}
-                setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}
-                exportTab={exportTab}
-            />
+                    <div className="flex gap-2 justify-center sm:justify-end">
+                        <AddTabGroupSection 
+                            addTabGroupSection={addTabGroupSection}
+                        />
+                        <ClearTabButton 
+                            tab={tab} 
+                            setTab={setTab} 
+                            setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}
+                        />
+                        <ExportTabButton 
+                            exportTab={exportTab}
+                        />
+                    </div>
+                </div>
+            </div>
         </GuitarTabContainer>
     );
 };
