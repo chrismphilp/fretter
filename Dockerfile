@@ -18,8 +18,13 @@ FROM gcr.io/distroless/base-debian12
 WORKDIR /app
 COPY --from=build /app/main /app/
 
-# Create directory for certificates (will be mounted at runtime)
-WORKDIR /app/certs
+# Add build args for certificate paths
+ARG X509_PUBLIC_CERT_PATH
+ARG X509_PRIVATE_CERT_PATH
+ENV X509_PUBLIC_CERT_PATH=${X509_PUBLIC_CERT_PATH}
+ENV X509_PRIVATE_CERT_PATH=${X509_PRIVATE_CERT_PATH}
+
+# Create directory for certificates
 WORKDIR /app
 
 EXPOSE 8080

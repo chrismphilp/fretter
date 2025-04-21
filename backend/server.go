@@ -10,12 +10,12 @@ import (
 
 	"backend/controller"
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 )
 
 // accessSecret retrieves a secret from Secret Manager
