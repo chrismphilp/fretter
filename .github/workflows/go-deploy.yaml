@@ -1,12 +1,12 @@
 name: Build and Push Docker Image
 
 on:
-  push:
-    branches: ["master"]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/go-deploy.yaml'
-  workflow_dispatch:  # Allow manual triggering of the workflow
+  #  push:
+  #  branches: ["master"]
+  #  paths:
+  #      - 'backend/**'
+  #      - '.github/workflows/go-deploy.yaml'
+  workflow_dispatch: # Allow manual triggering of the workflow
 
 jobs:
   build:
@@ -21,7 +21,7 @@ jobs:
 
       - id: auth
         name: Authenticate to Google Cloud
-        uses: 'google-github-actions/auth@v1'
+        uses: "google-github-actions/auth@v1"
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.SA_EMAIL }}
@@ -39,7 +39,7 @@ jobs:
           push: true
           tags: gcr.io/${{ secrets.PROJECT_ID }}/backend:latest
           provenance: false
-          
+
       - name: Create App Engine config
         run: |
           # Create app.yaml for App Engine Flexible environment
@@ -47,7 +47,7 @@ jobs:
           runtime: custom
           env: flex
           service: backend
-          
+
           env_variables:
             X509_PUBLIC_CERT_SECRET: projects/${{ secrets.PROJECT_ID }}/secrets/x509-cert-public/versions/latest
             X509_PRIVATE_CERT_SECRET: projects/${{ secrets.PROJECT_ID }}/secrets/x509-cert-private/versions/latest
@@ -59,13 +59,13 @@ jobs:
             memory_gb: 0.5
             disk_size_gb: 10
           EOL
-            
+
       # Enable required APIs
       - name: Enable App Engine Admin API
         run: |
           gcloud services enable appengine.googleapis.com --project=${{ secrets.PROJECT_ID }}
           gcloud services enable appengineflex.googleapis.com --project=${{ secrets.PROJECT_ID }}
-          
+
       # Grant necessary App Engine deployment permissions
       - name: Grant App Engine Admin permissions
         run: |
@@ -83,7 +83,7 @@ jobs:
           gcloud projects add-iam-policy-binding ${{ secrets.PROJECT_ID }} \
             --member=serviceAccount:${{ secrets.SA_EMAIL }} \
             --role=roles/storage.admin
-            
+
       - name: Ensure Secret Manager access
         run: |
           gcloud secrets add-iam-policy-binding x509-cert-public \
@@ -97,12 +97,12 @@ jobs:
             --role=roles/secretmanager.secretAccessor \
             --project=${{ secrets.PROJECT_ID }} \
             --quiet || true
-          
+
       # Official GitHub Action for App Engine deployment
       - name: Deploy to App Engine
-        uses: 'google-github-actions/deploy-appengine@v1'
+        uses: "google-github-actions/deploy-appengine@v1"
         with:
           project_id: ${{ secrets.PROJECT_ID }}
-          working_directory: './backend'
+          working_directory: "./backend"
           image_url: gcr.io/${{ secrets.PROJECT_ID }}/backend:latest
           deliverables: app.yaml
