@@ -16,6 +16,7 @@ sketch
 
 # Backend
 backend/X509*
+backend/tmp
 
 # Frontend
 frontend/node_modules

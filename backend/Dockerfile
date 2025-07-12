@@ -1,7 +1,7 @@
 FROM golang:1.23 AS build
 
 WORKDIR /app
-COPY backend/ .
+COPY / .
 
 # Install certificates and set environment variables for robust downloads
 RUN apt-get update && apt-get install -y ca-certificates

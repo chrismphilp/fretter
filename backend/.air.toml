@@ -1,0 +1,25 @@
+# .air.toml
+# Config file for air: https://github.com/air-verse/air
+
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  # The command to build your app
+  cmd = "go build -o ./tmp/main ."
+  # The binary to run
+  bin = "./tmp/main"
+  # Watch these file extensions
+  include_ext = ["go", "tpl", "tmpl", "html"]
+  # Ignore these directories
+  exclude_dir = ["tmp", "vendor"]
+  # Log errors to a file
+  log = "air_errors.log"
+
+[log]
+  # Show time in logs
+  time = true
+
+[misc]
+  # Delete the tmp directory on exit
+  clean_on_exit = true 
