@@ -5,11 +5,9 @@ import {Chorus, Compressor, Filter, PolySynth, Reverb, Sampler, Synth} from "ton
 import GuitarTabContainer from "./GuitarTabContainer";
 import TabDisplaySection from "./TabDisplaySection";
 import FretSelector from "./prosody/FretSelector";
-import PlaybackControlContainer from "./actions/playback/PlaybackControlContainer";
 import {v4} from 'uuid';
 import {emptyTab, playAllMusicalNotes, playMusicalNote} from "./utils";
 import ProsodyContainer from "./prosody/ProsodyContainer";
-import ManageTabContainer from "./actions/manage/ManageTabContainer";
 import PlaybackButton from "./actions/playback/PlaybackButton";
 import StopPlaybackButton from "./actions/playback/StopPlaybackButton";
 import AddTabGroupSection from "./actions/manage/AddTabGroupSection";
@@ -43,7 +41,7 @@ export interface Note {
 const GuitarTabEditor: FC = () => {
     const [currentlyPlayingNotes, setCurrentlyPlayingNotes] = useState<Note[]>([]);
     const [draggedNote, setDraggedNote] = useState<string | null>(null);
-    const [sampler, setSampler] = useState<any>(null);
+    const [sampler, setSampler] = useState<PolySynth | Sampler>(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const playbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -83,8 +81,6 @@ const GuitarTabEditor: FC = () => {
             onerror: (error) => {
                 console.error("Sample loading error:", error);
 
-                // Create better fallback synth with these new settings
-                // In your useEffect where the fallback synth is created
                 const fallbackSynth = new PolySynth(Synth, {
                     oscillator: {
                         type: "sine", // Use sine wave for cleaner sound
@@ -157,7 +153,7 @@ const GuitarTabEditor: FC = () => {
             if (playbackTimeoutRef.current) {
                 clearTimeout(playbackTimeoutRef.current);
             }
-            sampler?.releaseAll();
+            newSampler.releaseAll();
             newSampler.dispose();
             reverb.dispose();
             compressor.dispose();
@@ -165,12 +161,12 @@ const GuitarTabEditor: FC = () => {
     }, []);
 
     const playNote = (stringIndex: number, fret: string, type?: 'h' | 'p' | 'space') => {
-        playMusicalNote(sampler, isLoaded, tab.capo, stringIndex, fret, type);
+        playMusicalNote(sampler as Sampler, isLoaded, tab.capo, stringIndex, fret, type);
     }
 
     const playAllNotes = async () => {
         setIsPlaying(true);
-        await playAllMusicalNotes(sampler, tab, isLoaded, isPlaying, setCurrentlyPlayingNotes, playbackTimeoutRef);
+        await playAllMusicalNotes(sampler as Sampler, tab, isLoaded, isPlaying, setCurrentlyPlayingNotes, playbackTimeoutRef);
     }
 
     const updateNote = (stringIndex: number, position: number, groupIndex: number, value: string, type?: 'h' | 'p' | 'space') => {
@@ -188,7 +184,7 @@ const GuitarTabEditor: FC = () => {
             } else {
                 const absolutePosition = (groupIndex * 16) + position;
                 const newNote: Note = {
-                    _id: crypto.randomUUID(), // Generate new ID for the note
+                    _id: v4(), // Generate new ID for the note
                     tabGroupId: targetGroup._id,
                     stringIndex,
                     position,
@@ -228,7 +224,7 @@ const GuitarTabEditor: FC = () => {
             groups: [
                 ...prev.groups,
                 {
-                    _id: crypto.randomUUID(),
+                    _id: v4(),
                     tabId: prev._id,
                     groupIndex: prev.groups.length,
                     notes: [
@@ -409,28 +405,14 @@ const GuitarTabEditor: FC = () => {
             <div className="card p-4 sticky bottom-4 z-10 border-t-2 border-primary-200">
                 <div className="flex flex-col sm:flex-row justify-between gap-4">
                     <div className="flex gap-2 justify-center sm:justify-start">
-                        <PlaybackButton 
-                            playAllNotes={playAllNotes} 
-                            isPlaying={isPlaying}
-                        />
-                        <StopPlaybackButton 
-                            stopPlayback={stopPlayback} 
-                            isPlaying={isPlaying}
-                        />
+                        <PlaybackButton playAllNotes={playAllNotes} isPlaying={isPlaying}/>
+                        <StopPlaybackButton stopPlayback={stopPlayback} isPlaying={isPlaying}/>
                     </div>
 
                     <div className="flex gap-2 justify-center sm:justify-end">
-                        <AddTabGroupSection 
-                            addTabGroupSection={addTabGroupSection}
-                        />
-                        <ClearTabButton 
-                            tab={tab} 
-                            setTab={setTab} 
-                            setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}
-                        />
-                        <ExportTabButton 
-                            exportTab={exportTab}
-                        />
+                        <AddTabGroupSection addTabGroupSection={addTabGroupSection}/>
+                        <ClearTabButton tab={tab} setTab={setTab} setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}/>
+                        <ExportTabButton exportTab={exportTab}/>
                     </div>
                 </div>
             </div>
