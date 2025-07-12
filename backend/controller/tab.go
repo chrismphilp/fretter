@@ -28,20 +28,6 @@ func NewTabController(db *mongo.Database) *TabController {
 	}
 }
 
-func (c *TabController) SetupRoutes(router *gin.Engine) {
-	api := router.Group("/api")
-	{
-		tabs := api.Group("/tabs")
-		{
-			tabs.GET("", c.GetAllTabs)
-			tabs.POST("", c.CreateTab)
-			tabs.GET("/:id", c.GetTabById)
-			tabs.PUT("/:id", c.UpdateTab)
-			tabs.DELETE("/:id", c.DeleteTab)
-		}
-	}
-}
-
 func (c *TabController) GetAllTabs(ctx *gin.Context) {
 	dbCtx, cancel := context.WithTimeout(ctx.Request.Context(), 5*time.Second)
 	defer cancel()

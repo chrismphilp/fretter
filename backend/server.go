@@ -25,8 +25,8 @@ func main() {
 	router.Use(corsMiddleware())
 	router.GET("/", indexHandler)
 
-	tabController := controller.NewTabController(database)
-	tabController.SetupRoutes(router)
+	tc := controller.NewTabController(database)
+	controller.SetupRoutes(router, tc)
 
 	port := os.Getenv("PORT")
 	if port == "" {
