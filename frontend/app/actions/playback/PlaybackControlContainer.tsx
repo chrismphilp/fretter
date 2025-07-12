@@ -15,10 +15,10 @@ const PlaybackControlContainer: FC<PlaybackControlsContainerProps> = (
         stopPlayback,
     }) => {
     return (
-        <div className="mb-6 flex space-x-3">
+        <>
             <PlaybackButton playAllNotes={playAllNotes} isPlaying={isPlaying}/>
             <StopPlaybackButton stopPlayback={stopPlayback} isPlaying={isPlaying}/>
-        </div>
+        </>
     );
 };
 

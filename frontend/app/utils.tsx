@@ -1,4 +1,4 @@
-import {Note, Tab, TabGroup} from "./GuitarTabEditor";
+import {Note, Tab, TabGroup} from "./display/GuitarTabEditor";
 import {now, Sampler, start} from "tone";
 import {v4} from "uuid";
 

@@ -1,5 +1,5 @@
 // API client for interacting with the Go backend
-import {Tab} from '../GuitarTabEditor';
+import {Tab} from '../display/GuitarTabEditor';
 
 // API configuration
 const API_BASE_URL = `${process.env.NEXT_PUBLIC_API_URL}/api` || 'https://backend-dot-fretter.ew.r.appspot.com/api';

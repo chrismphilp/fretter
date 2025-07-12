@@ -1,4 +1,4 @@
-import {Note, Tab} from "../../GuitarTabEditor";
+import {Note, Tab} from "../../display/GuitarTabEditor";
 import {FC} from "react";
 import {emptyTab} from "../../utils";
 

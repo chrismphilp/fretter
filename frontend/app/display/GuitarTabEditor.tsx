@@ -4,15 +4,11 @@ import {DragEvent, FC, useEffect, useRef, useState} from 'react';
 import {Chorus, Compressor, Filter, PolySynth, Reverb, Sampler, Synth} from "tone";
 import GuitarTabContainer from "./GuitarTabContainer";
 import TabDisplaySection from "./TabDisplaySection";
-import FretSelector from "./prosody/FretSelector";
+import FretSelector from "../prosody/FretSelector";
 import {v4} from 'uuid';
-import {emptyTab, playAllMusicalNotes, playMusicalNote} from "./utils";
-import ProsodyContainer from "./prosody/ProsodyContainer";
-import PlaybackButton from "./actions/playback/PlaybackButton";
-import StopPlaybackButton from "./actions/playback/StopPlaybackButton";
-import AddTabGroupSection from "./actions/manage/AddTabGroupSection";
-import ClearTabButton from "./actions/manage/ClearTabButton";
-import ExportTabButton from "./actions/manage/ExportTabButton";
+import {emptyTab, playAllMusicalNotes, playMusicalNote} from "../utils";
+import ProsodyContainer from "../prosody/ProsodyContainer";
+import ActionContainer from "../actions/ActionContainer";
 
 export interface Tab {
     _id: string;
@@ -240,80 +236,6 @@ const GuitarTabEditor: FC = () => {
         }));
     };
 
-    const exportTab = () => {
-        let tabText = "Guitar Tab\n\n";
-
-        if (tab.capo > 0) {
-            tabText += `Capo: ${tab.capo}\n\n`;
-        }
-
-        const stringLabels = ['e|', 'B|', 'G|', 'D|', 'A|', 'E|'];
-        const stringLines = Array(6).fill('').map((_, i) => stringLabels[i]);
-
-        // Process each group
-        tab.groups.forEach((group, groupIndex) => {
-            // Add group separator if not first group
-            if (groupIndex > 0) {
-                stringLines.forEach((_, i) => {
-                    stringLines[i] += '||';
-                });
-            }
-
-            // Get notes for this group
-            for (let position = 0; position < 16; position++) {
-                for (let stringIndex = 0; stringIndex < 6; stringIndex++) {
-                    // Find note at this position for this string
-                    const stringNotes = group.notes[5 - stringIndex] || [];
-                    const note = stringNotes.find(n => n.position === position);
-
-                    if (!note) {
-                        stringLines[stringIndex] += '-';
-                    } else {
-                        if (note.type === 'h') {
-                            // Find next note for hammer-on
-                            const nextNote = stringNotes.find(n => n.position === position + 1);
-                            if (nextNote) {
-                                stringLines[stringIndex] += `${note.fret}h${nextNote.fret}`;
-                                position++; // Skip next position
-                            } else {
-                                stringLines[stringIndex] += note.fret;
-                            }
-                        } else if (note.type === 'p') {
-                            stringLines[stringIndex] += `[${note.fret}]`;
-                        } else {
-                            stringLines[stringIndex] += note.fret;
-                        }
-                    }
-
-                    stringLines[stringIndex] += '-';
-                }
-            }
-        });
-
-        tabText += stringLines.join('\n') + '\n';
-
-        // Add legend if techniques are used
-        if (tab.groups.some(group =>
-            group.notes.some(stringNotes =>
-                stringNotes.some(note => note.type === 'h' || note.type === 'p')
-            )
-        )) {
-            tabText += '\nLegend:\n';
-            tabText += '5h7 - hammer-on from 5 to 7\n';
-            tabText += '[5] - pull-off\n';
-        }
-
-        const blob = new Blob([tabText], {type: 'text/plain'});
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'guitar-tab.txt';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-    };
-
     const stopPlayback = () => {
         setIsPlaying(false);
         setCurrentlyPlayingNotes([]);
@@ -402,20 +324,14 @@ const GuitarTabEditor: FC = () => {
 
             <FretSelector handleDragStart={handleDragStart}/>
 
-            <div className="card p-4 sticky bottom-4 z-10 border-t-2 border-primary-200">
-                <div className="flex flex-col sm:flex-row justify-between gap-4">
-                    <div className="flex gap-2 justify-center sm:justify-start">
-                        <PlaybackButton playAllNotes={playAllNotes} isPlaying={isPlaying}/>
-                        <StopPlaybackButton stopPlayback={stopPlayback} isPlaying={isPlaying}/>
-                    </div>
-
-                    <div className="flex gap-2 justify-center sm:justify-end">
-                        <AddTabGroupSection addTabGroupSection={addTabGroupSection}/>
-                        <ClearTabButton tab={tab} setTab={setTab} setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}/>
-                        <ExportTabButton exportTab={exportTab}/>
-                    </div>
-                </div>
-            </div>
+            <ActionContainer tab={tab}
+                             setTab={setTab}
+                             setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}
+                             addTabGroupSection={addTabGroupSection}
+                             isPlaying={isPlaying}
+                             playAllNotes={playAllNotes}
+                             stopPlayback={stopPlayback}
+            />
         </GuitarTabContainer>
     );
 };

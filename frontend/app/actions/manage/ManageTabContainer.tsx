@@ -1,32 +1,28 @@
 import {FC} from "react";
-import AddTabGroupSectionButton from "./AddTabGroupSection";
 import ClearTabButton from "./ClearTabButton";
-import ExportTabButton from "./ExportTabButton";
-import {Note, Tab} from "../../GuitarTabEditor";
+import AddTabGroupSection from "./AddTabGroupSection";
+import {Note, Tab} from "../../display/GuitarTabEditor";
 
 interface ManageTabContainerProps {
+    addTabGroupSection: () => void;
     tab: Tab;
     setTab: (tab: Tab) => void;
-    addTabGroupSection: () => void;
     setCurrentlyPlayingNotes: (notes: Note[]) => void;
-    exportTab: () => void;
 }
 
 const ManageTabContainer: FC<ManageTabContainerProps> = (
     {
+        addTabGroupSection,
         tab,
         setTab,
-        addTabGroupSection,
         setCurrentlyPlayingNotes,
-        exportTab,
     }) => {
     return (
-        <div className="mb-8 flex flex-wrap gap-3">
-            <AddTabGroupSectionButton addTabGroupSection={addTabGroupSection}/>
+        <>
+            <AddTabGroupSection addTabGroupSection={addTabGroupSection}/>
             <ClearTabButton tab={tab} setTab={setTab} setCurrentlyPlayingNotes={setCurrentlyPlayingNotes}/>
-            <ExportTabButton exportTab={exportTab}/>
-        </div>
+        </>
     );
-}
+};
 
 export default ManageTabContainer;
