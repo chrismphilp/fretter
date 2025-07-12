@@ -9,30 +9,7 @@ import {v4} from 'uuid';
 import {emptyTab, playAllMusicalNotes, playMusicalNote} from "../utils";
 import ProsodyContainer from "../prosody/ProsodyContainer";
 import ActionContainer from "../actions/ActionContainer";
-
-export interface Tab {
-    _id: string;
-    groups: TabGroup[];
-    tempo: number;
-    capo: number;
-}
-
-export interface TabGroup {
-    _id: string;
-    tabId: string;
-    groupIndex: number;
-    notes: Note[][];
-}
-
-export interface Note {
-    _id: string;
-    tabGroupId?: string;
-    stringIndex: number;
-    fret: string;
-    position: number;
-    absolutePosition: number;
-    type?: 'h' | 'p' | 'space';
-}
+import {Note, Tab} from "../models/tab";
 
 const GuitarTabEditor: FC = () => {
     const [currentlyPlayingNotes, setCurrentlyPlayingNotes] = useState<Note[]>([]);
@@ -230,7 +207,7 @@ const GuitarTabEditor: FC = () => {
                         [],
                         [],
                         []
-                    ] // Initialize empty arrays for each string
+                    ],
                 }
             ]
         }));

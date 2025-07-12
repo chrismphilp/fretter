@@ -5,7 +5,7 @@ interface FretSelectorProps {
 }
 
 const FretSelector: FC<FretSelectorProps> = ({handleDragStart}) => {
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(true);
     
     const toggleExpand = () => {
         setIsExpanded(!isExpanded);
@@ -19,13 +19,13 @@ const FretSelector: FC<FretSelectorProps> = ({handleDragStart}) => {
                 </h3>
                 <button 
                     onClick={toggleExpand}
-                    className="md:hidden btn btn-compact bg-neutral-100 text-neutral-700"
+                    className="btn btn-compact bg-neutral-100 text-neutral-700"
                 >
                     {isExpanded ? 'Show Less' : 'Show All'}
                 </button>
             </div>
             <div className="flex flex-wrap gap-2">
-                {[...Array(isExpanded ? 13 : 8)].map((_, i) => (
+                {[...Array(isExpanded ? 19 : 8)].map((_, i) => (
                     <div
                         key={i}
                         draggable
